@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdint.h>
+#include "util.c"
 
 #define OPTSTR "vp:s:"
 #define USAGE "Usage: [ -v ] [ -p part [ -s subpart ] ] imagefile [ path ]\n"
@@ -9,6 +11,7 @@
 #define SUBPARTERR "subpartition must be between 0-3"
 #define NO_IMG "an image file must be provided"
 #define MALLOCERR "Malloc error"
+#define OPENERR "open error"
 #define PRTVAR "%s: %s\n"
 #define NO_PART -1
 #define MAX_PART 4
@@ -27,6 +30,9 @@ int main(int argc, char *argv[]){
     extern char *optarg;
     int isV = FALSE, part = NO_PART, sub_part = NO_PART;
     char *image = NULL, *min_path = NULL;
+    FILE *image_file;
+    uint32_t disk_start;
+    struct superblock *superblock;
 
     /* parses all options using getopt and
        if they are invalid in anyway, it errors
@@ -89,6 +95,34 @@ int main(int argc, char *argv[]){
         strncpy(min_path, argv[optind], path_len);
     }
 
+    /* open image file, therefore checking if it
+       is valid */
+    if((image_file = fopen(image, "r+w")) == NULL){
+        perror(OPENERR);
+        return EXIT_FAILURE;
+    }
+
+    /* check if partitioning is required,
+       if it is then find and verify if it
+       exists and set the start of disk to that,
+       otherwise set the start of disk as the start
+       of the opened image file */
+
+    /* search and verify for super block 
+       and search starting from root by parsing
+       path given */
+       superblock = get_superblock(image_file, disk_start);
+       if(superblock == NULL) return NULL;
+
+    /* MINLS SPECIFIC 
+       get type of file and other information about it.
+       if it is a directory, print information about each file in it,
+       if it isn't print out information of file */
+
+
+
+    /* prints out image and min_path variables if they exist
+      for testing purposes */
     if(image){
         printf(PRTVAR, "image", image);
     }
