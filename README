@@ -1,1 +1,13 @@
-stuff
+
+
+How to set image file size after using TAR in windows terminal
+
+$fs = [System.IO.File]::Open("Path to image file that was tar'ed", 'Open', 'Write')
+$fs.SetLength(1440KB)
+$fs.Close()
+
+how to get rid of ^M in MINIX vi
+
+:s%/^M//g
+where "^M" is typed by inputing "CTRL+V" and "CRTL+M" in order
+
