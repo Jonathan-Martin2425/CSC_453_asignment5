@@ -14,9 +14,7 @@
 #define MALLOCERR "Malloc error"
 #define OPENERR "open error"
 #define PRTVAR "%s: %s\n"
-#define NO_PART -1
 #define INITIALDISK 0
-#define INITIALSEC 1
 #define MAX_PART 4
 
 #ifndef FALSE
@@ -34,7 +32,7 @@ int main(int argc, char *argv[]){
     int isV = FALSE, part = NO_PART, sub_part = NO_PART;
     char *image = NULL, *min_path = NULL;
     FILE *image_file;
-    uint32_t disk_start, sec_size;
+    uint32_t disk_start, part_size;
     struct superblock *superblock;
     off_t inode_table_offset;
 
@@ -45,11 +43,9 @@ int main(int argc, char *argv[]){
         switch (option)
         {
         case 'v':
-            printf("option -%c wit arg %s\n", option, optarg);
             isV = TRUE;
             break;
         case 'p':
-            printf("option -%c wit arg %s\n", option, optarg);
             part = strtol(optarg, NULL, 10);
             if(part < 0 || part >= MAX_PART){
                 perror(PARTERR);
@@ -57,9 +53,8 @@ int main(int argc, char *argv[]){
             }
             break;
         case 's':
-            printf("option -%c wit arg %s\n", option, optarg);
-            part = strtol(optarg, NULL, 10);
-            if(part < 0 || part >= MAX_PART){
+            sub_part = strtol(optarg, NULL, 10);
+            if(sub_part < 0 || sub_part >= MAX_PART){
                 perror(SUBPARTERR);
                 return EXIT_FAILURE;
             }
@@ -87,7 +82,7 @@ int main(int argc, char *argv[]){
            string to new path string we
            will use strtok on */
         path_len = strlen(argv[optind]);
-        if((min_path = (char*)malloc(path_len + 1)) < 0){
+        if((int)(min_path = (char*)malloc(path_len + 1)) < 0){
             perror(MALLOCERR);
             return EXIT_FAILURE;
         }
@@ -108,16 +103,17 @@ int main(int argc, char *argv[]){
        otherwise set the start of disk as the start
        of the opened image file */
     if(part != NO_PART){
-        if(find_partition(image, part, sub_part, &disk_start, &sec_size) == EXIT_FAILURE){
+        if(partition_finder(image, part, sub_part, &disk_start, &part_size, isV) == EXIT_FAILURE){
             return EXIT_FAILURE;
         }
     }else{
-        if(sub_part != NO_PART){
+        if(sub_part == NO_PART){
+            disk_start = INITIALDISK;
+            part_size = INITIALDISK;
+        }else{
             printf(USAGE);
             return EXIT_FAILURE;
         }
-        disk_start = INITIALDISK;
-        sec_size = INITIALSEC;
     }
 
     /***  
@@ -127,27 +123,15 @@ int main(int argc, char *argv[]){
     ***/
 
     /* finds superblock from start of partition*/
-    superblock = get_superblock(image_file, disk_start * sec_size);
+    superblock = get_superblock(image_file, disk_start * SECTOR_SIZE, isV);
     if(superblock == NULL) return EXIT_FAILURE;
 
-    inode_table_offset = get_inode_table(superblock, disk_start * sec_size);
+    inode_table_offset = get_inode_table(superblock, disk_start * SECTOR_SIZE);
 
     /* MINLS SPECIFIC 
        get type of file and other information about it.
        if it is a directory, print information about each file in it,
        if it isn't print out information of file */
-
-
-
-    /* prints out image and min_path variables if they exist
-      for testing purposes */
-    if(image){
-        printf(PRTVAR, "image", image);
-    }
-
-    if(min_path){
-        printf(PRTVAR, "min_path", min_path);
-    }
 
     free(min_path);
     return 0;

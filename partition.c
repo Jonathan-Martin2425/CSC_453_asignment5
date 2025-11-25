@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <stdint.h>
 #include "partition.h"
+#include "util.h"
 
 #define MBR_SIZE 512
 #define PART_TABLE_OFFSET 0x1BE
@@ -24,7 +25,7 @@ uint32_t uint32_convert(uint8_t *p) {
 }
 
 int partition_finder(char *img, int part_num, int sub_part, 
-                     uint32_t *offset, uint32_t *p_size) {
+                     uint32_t *offset, uint32_t *p_size, int isV) {
     uint8_t mbr[MBR_SIZE];
     uint8_t sub_mbr[MBR_SIZE];
     uint8_t part_type, sub_type;
@@ -45,6 +46,12 @@ int partition_finder(char *img, int part_num, int sub_part,
         perror("Error reading from file");
         return EXIT_FAILURE;
     }
+
+    /* after reading, try to print out table*/
+    if(isV){
+        print_part_table(fd, PART_TABLE_OFFSET, part_num, NO_PART);
+    }
+
 
     /* check if partition table has valid signature */
     if (mbr[PART_TABLE_SIG_OFFSET] != VALID_PART_BYTE_ONE || 
@@ -91,6 +98,9 @@ int partition_finder(char *img, int part_num, int sub_part,
         }
         
         /* traverse to subpartition's partition table */ 
+        if(isV){
+            printf("\nfirst_sec: %d\n\n", first_sec);
+        }
         location = (off_t)first_sec * SECTOR_SIZE;
         r = lseek(fd, location, SEEK_SET);
         
@@ -107,6 +117,11 @@ int partition_finder(char *img, int part_num, int sub_part,
             perror("Error reading from file");
             return EXIT_FAILURE;
         }
+
+        /* after reading MBR, print potential subpartition table */
+        if(isV){
+            print_part_table(fd, location + PART_TABLE_OFFSET, sub_part, part_num);
+        }
         
         if (sub_mbr[PART_TABLE_SIG_OFFSET] != VALID_PART_BYTE_ONE || 
             sub_mbr[PART_TABLE_SIG_OFFSET + 1] != VALID_PART_BYTE_TWO) {
@@ -117,7 +132,7 @@ int partition_finder(char *img, int part_num, int sub_part,
 
         base = PART_TABLE_OFFSET + sub_part * PART_ENTRY_SIZE;
 
-        sub_type = sub_mbr[base + 4];
+        sub_type = sub_mbr[base + PART_TYPE_OFFSET];
         sub_first_sec = uint32_convert(&sub_mbr[base + PART_LFIRST_OFFSET]);
         sub_psize = uint32_convert(&sub_mbr[base + PART_SIZE_OFFSET]);
         

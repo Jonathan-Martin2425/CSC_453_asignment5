@@ -8,6 +8,7 @@
 #define MALLOCERR "Malloc error"
 #define READERR "read error"
 #define FILEERR "FILE error"
+#define NO_PART -1
 
 struct superblock { /* Minix Version 3 Superblock
                     * this structure found in fs/super.h
@@ -29,5 +30,6 @@ struct superblock { /* Minix Version 3 Superblock
     uint8_t subversion; /* filesystem sub–version */
 };
 
-struct superblock *get_superblock(FILE *, off_t);
+struct superblock *get_superblock(FILE *, off_t, int);
 off_t get_inode_table(struct superblock *, off_t);
+void print_part_table(int, off_t, int, int);

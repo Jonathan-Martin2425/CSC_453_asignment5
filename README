@@ -11,3 +11,8 @@ how to get rid of ^M in MINIX vi
 :s%/^M//g
 where "^M" is typed by inputing "CTRL+V" and "CRTL+M" in order
 
+Minix partition structure
+- while there does exist all 16 partitions in /dev, which are /dev/c0d0p0s0-/dev/c0d0p3s3
+  there is only 1 partions and 3 sub partitions that actually exist on the controller image
+  so if we want to test giving no partitions, we input /dev/c0d0p0s0, /dev/c0d0p0s1 or /dev/c0d0p0s2
+
