@@ -1,5 +1,7 @@
-#include <super.h>
+/* include <super.h>*/
 #include <stdio.h>
+#include <stdint.h>
+#include "util.h"
 
 #define SUPMAGIC 0x4D5A
 #define SUPEROFF 1024
@@ -14,7 +16,7 @@ struct superblock *get_superblock(FILE *image, off_t disk_start){
     struct superblock *super;
 
     /* set file ptr to start of disk plus the offset to
-       the superblock to get ready to read it */ 
+       the superblock to get ready to read it */  
     if(fseek(image, disk_start + SUPEROFF, SEEK_SET) < 0){
         perror(FILEERR);
         return NULL;
@@ -36,17 +38,24 @@ struct superblock *get_superblock(FILE *image, off_t disk_start){
     /*check if superblock magic number is valid,
       if it isn't return NULL, otherwise return superblock */
     if(super->magic == SUPMAGIC){
-        return super
+        return super;
     }else{
         free(super);
         return NULL;
     }
 }
 
-/* given the image file, start of disk and superblock,
-   returns the offset to the inode table by calculating
-   it from the superblock's blocksize, imap number
-   of blocks and zmap number of blocks */
-off_t get_inode_table(FILE *image, struct superblock *super, off_t disk_start){
-    
+/* given the start of disk and superblock,
+   returns the offset to the inode table  */
+off_t get_inode_table(struct superblock *super, off_t disk_start){
+    int16_t block_size = super->blocksize;
+    off_t inode_offset;
+
+    /* inode table is calculated from start of disk + boot sector
+       plus the blocks allocated by the superblock, inode bitmap
+       and zone bitmap found in the superblock*/
+    inode_offset = disk_start + SUPEROFF +
+                   block_size * (1 + super->i_blocks + super->z_blocks);
+
+    return inode_offset;
 }

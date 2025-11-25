@@ -5,7 +5,13 @@
 
 #define MBR_SIZE 512
 #define PART_TABLE_OFFSET 0x1BE
+#define PART_TABLE_SIG_OFFSET 510
+#define VALID_PART_BYTE_ONE 0x55
+#define VALID_PART_BYTE_TWO 0xAA
 #define PART_ENTRY_SIZE 16
+#define PART_TYPE_OFFSET 4
+#define PART_LFIRST_OFFSET 8
+#define PART_SIZE_OFFSET 12
 #define SECTOR_SIZE 512
 #define MINIX_TYPE 0x81
 
@@ -41,7 +47,8 @@ int partition_finder(char *img, int part_num, int sub_part,
     }
 
     /* check if partition table has valid signature */
-    if (mbr[510] != 0x55 || mbr[511] != 0xAA) {
+    if (mbr[PART_TABLE_SIG_OFFSET] != VALID_PART_BYTE_ONE || 
+        mbr[PART_TABLE_SIG_OFFSET + 1] != VALID_PART_BYTE_TWO) {
         close(fd);
         perror("Partition table does not have valid signature");
         return EXIT_FAILURE;
@@ -55,9 +62,9 @@ int partition_finder(char *img, int part_num, int sub_part,
     }
     
     /* find base of given partition */
-    base = PARTITION_TABLE_OFFSET + (part_num * PART_ENTRY_SIZE);
+    base = PART_TABLE_OFFSET + (part_num * PART_ENTRY_SIZE);
     /* this finds type field in partition struct */
-    part_type = mbr[base + 4];
+    part_type = mbr[base + PART_TYPE_OFFSET];
     
     if (part_type != MINIX_TYPE) {
         close(fd);
@@ -66,8 +73,8 @@ int partition_finder(char *img, int part_num, int sub_part,
     }
     
     /* getting 32 bit ints from partition struct */ 
-    first_sec = uint32_convert(&mbr[base + 8]);
-    psize = uint32_convert(&mbr[base + 12]);
+    first_sec = uint32_convert(&mbr[base + PART_LFIRST_OFFSET]);
+    psize = uint32_convert(&mbr[base + PART_SIZE_OFFSET]);
 
     if (psize == 0) {
         close(fd);
@@ -101,7 +108,8 @@ int partition_finder(char *img, int part_num, int sub_part,
             return EXIT_FAILURE;
         }
         
-        if (sub_mbr[510] != 0x55 || sub_mbr[511] != 0xAA) {
+        if (sub_mbr[PART_TABLE_SIG_OFFSET] != VALID_PART_BYTE_ONE || 
+            sub_mbr[PART_TABLE_SIG_OFFSET + 1] != VALID_PART_BYTE_TWO) {
             close(fd);
             perror("Invalid SUB MBR signature");
             return EXIT_FAILURE;
@@ -110,8 +118,8 @@ int partition_finder(char *img, int part_num, int sub_part,
         base = PART_TABLE_OFFSET + sub_part * PART_ENTRY_SIZE;
 
         sub_type = sub_mbr[base + 4];
-        sub_first_sec = uint32_convert(&sub_mbr[base + 8]);
-        sub_psize = uint32_convert(&sub_mbr[base + 12]);
+        sub_first_sec = uint32_convert(&sub_mbr[base + PART_LFIRST_OFFSET]);
+        sub_psize = uint32_convert(&sub_mbr[base + PART_SIZE_OFFSET]);
         
         if (sub_type != MINIX_TYPE) {
             close(fd);

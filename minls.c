@@ -3,7 +3,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdint.h>
-#include "util.c"
+#include "partition.h"
+#include "util.h"
 
 #define OPTSTR "vp:s:"
 #define USAGE "Usage: [ -v ] [ -p part [ -s subpart ] ] imagefile [ path ]\n"
@@ -14,6 +15,8 @@
 #define OPENERR "open error"
 #define PRTVAR "%s: %s\n"
 #define NO_PART -1
+#define INITIALDISK 0
+#define INITIALSEC 1
 #define MAX_PART 4
 
 #ifndef FALSE
@@ -31,8 +34,9 @@ int main(int argc, char *argv[]){
     int isV = FALSE, part = NO_PART, sub_part = NO_PART;
     char *image = NULL, *min_path = NULL;
     FILE *image_file;
-    uint32_t disk_start;
+    uint32_t disk_start, sec_size;
     struct superblock *superblock;
+    off_t inode_table_offset;
 
     /* parses all options using getopt and
        if they are invalid in anyway, it errors
@@ -60,13 +64,9 @@ int main(int argc, char *argv[]){
                 return EXIT_FAILURE;
             }
             break;
-        case '?':
-            perror(USAGE);
-            return EXIT_FAILURE;
-            break;
         default:
             printf(USAGE);
-            return 0;
+            return EXIT_FAILURE;
             break;
         }
     }
@@ -107,12 +107,30 @@ int main(int argc, char *argv[]){
        exists and set the start of disk to that,
        otherwise set the start of disk as the start
        of the opened image file */
+    if(part != NO_PART){
+        if(find_partition(image, part, sub_part, &disk_start, &sec_size) == EXIT_FAILURE){
+            return EXIT_FAILURE;
+        }
+    }else{
+        if(sub_part != NO_PART){
+            printf(USAGE);
+            return EXIT_FAILURE;
+        }
+        disk_start = INITIALDISK;
+        sec_size = INITIALSEC;
+    }
 
-    /* search and verify for super block 
-       and search starting from root by parsing
-       path given */
-       superblock = get_superblock(image_file, disk_start);
-       if(superblock == NULL) return NULL;
+    /***  
+       search and verify super block, then
+       search starting from root by parsing
+       path given 
+    ***/
+
+    /* finds superblock from start of partition*/
+    superblock = get_superblock(image_file, disk_start * sec_size);
+    if(superblock == NULL) return NULL;
+
+    inode_table_offset = get_inode_table(superblock, disk_start * sec_size);
 
     /* MINLS SPECIFIC 
        get type of file and other information about it.
