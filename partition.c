@@ -54,7 +54,7 @@ int partition_finder(char *img, int part_num, int sub_part,
         return EXIT_FAILURE;
     }
 
-    // check validity of partition number 
+    /* check validity of partition number */
     if (part_num < 0 || part_num > 3) {
         close(fd);
         perror("Invalid partition number");

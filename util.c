@@ -1,6 +1,4 @@
 
-/* located in /usr/src/servers/mfs */
-#include <super.h>
 #include <stdio.h>
 #include <stdint.h>
 #include "util.h"

@@ -128,7 +128,7 @@ int main(int argc, char *argv[]){
 
     /* finds superblock from start of partition*/
     superblock = get_superblock(image_file, disk_start * sec_size);
-    if(superblock == NULL) return NULL;
+    if(superblock == NULL) return EXIT_FAILURE;
 
     inode_table_offset = get_inode_table(superblock, disk_start * sec_size);
 
