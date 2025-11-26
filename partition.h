@@ -10,9 +10,6 @@
 #define SECTOR_SIZE 512
 #define MINIX_TYPE 0x81
 
-uint32_t uint32_convert(uint8_t *);
-int partition_finder(char *, int, int, uint32_t *, uint32_t *, int);
-
 struct partition_entry {
     uint8_t bootind;
     uint8_t start_head;
@@ -25,3 +22,7 @@ struct partition_entry {
     uint32_t lFirst;
     uint32_t size; 
 };
+
+uint32_t uint32_convert(uint8_t *);
+int partition_finder(char *, int, int, uint32_t *, uint32_t *, int);
+void print_part_table(int, off_t, int, int);

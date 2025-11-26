@@ -1,7 +1,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdint.h>
-#include "partition.h"
 #include "util.h"
 
 #define MBR_SIZE 512
@@ -148,8 +147,9 @@ int partition_finder(char *img, int part_num, int sub_part,
             return EXIT_FAILURE;
         }
 
-        *offset = first_sec + sub_first_sec;
+        *offset = sub_first_sec;
         *p_size = sub_psize;
+
 
         close(fd);
         return EXIT_SUCCESS;
@@ -160,4 +160,43 @@ int partition_finder(char *img, int part_num, int sub_part,
 
     close(fd); 
     return EXIT_SUCCESS;
+}
+
+void print_part_table(int fd, off_t table_offset, int part, int subPart){
+    struct partition_entry buf[NUM_PART];
+    int i;
+
+    if(lseek(fd, table_offset, SEEK_SET) < 0){
+        perror(FILEERR);
+        return;
+    }
+
+    if(read(fd, &buf, sizeof(struct partition_entry) * NUM_PART) < 0){
+        perror(FILEERR);
+        return;
+    }
+
+    if(subPart != NO_PART){
+        fprintf(stderr, SUB_PART_PRINT, subPart);
+    }else{
+        fprintf(stderr, PART_PRINT);
+    }
+
+    for(i = 0; i < NUM_PART; i++){
+        if(i == part){
+            fprintf(stderr, ACTUAL_PART_ENTRY, i + 1);
+        }else{
+            fprintf(stderr, PART_ENTRY_PRINT, i + 1);
+        }
+        fprintf(stderr, NUM_ATTRIBUTE_PRINT, "bootind", buf[i].bootind);
+        fprintf(stderr, NUM_ATTRIBUTE_PRINT, "start_head", buf[i].start_head);
+        fprintf(stderr, NUM_ATTRIBUTE_PRINT, "start_sec", buf[i].start_sec);
+        fprintf(stderr, NUM_ATTRIBUTE_PRINT, "start_cyl", buf[i].start_cyl);
+        fprintf(stderr, NUM_ATTRIBUTE_PRINT, "type", buf[i].type);
+        fprintf(stderr, NUM_ATTRIBUTE_PRINT, "end_head", buf[i].end_head);
+        fprintf(stderr, NUM_ATTRIBUTE_PRINT, "end_sec", buf[i].end_sec);
+        fprintf(stderr, NUM_ATTRIBUTE_PRINT, "end_cyl", buf[i].end_cyl);
+        fprintf(stderr, NUM_ATTRIBUTE_PRINT, "lFirst", buf[i].lFirst);
+        fprintf(stderr, NUM_ATTRIBUTE_PRINT, "size", buf[i].size);
+    }
 }

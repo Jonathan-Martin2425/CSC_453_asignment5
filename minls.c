@@ -3,7 +3,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdint.h>
-#include "partition.h"
 #include "util.h"
 
 #define OPTSTR "vp:s:"
@@ -16,6 +15,7 @@
 #define PRTVAR "%s: %s\n"
 #define INITIALDISK 0
 #define MAX_PART 4
+#define DEF_PATH "/"
 
 #ifndef FALSE
 #define FALSE 0
@@ -122,11 +122,11 @@ int main(int argc, char *argv[]){
        path given 
     ***/
 
-    /* finds superblock from start of partition*/
-    superblock = get_superblock(image_file, disk_start * SECTOR_SIZE, isV);
-    if(superblock == NULL) return EXIT_FAILURE;
-
-    inode_table_offset = get_inode_table(superblock, disk_start * SECTOR_SIZE);
+    if(min_path == NULL){
+        find_file(DEF_PATH, image_file, disk_start * SECTOR_SIZE, isV);
+    }else{
+        find_file(min_path, image_file,  disk_start * SECTOR_SIZE, isV);
+    }
 
     /* MINLS SPECIFIC 
        get type of file and other information about it.

@@ -11,3 +11,6 @@ util.o: util.c
 
 partition.o: partition.c
 	$(CC) -c partition.c
+
+clean:
+	rm *.o minls
