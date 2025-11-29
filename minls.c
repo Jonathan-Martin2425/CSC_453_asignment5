@@ -72,7 +72,6 @@ int main(int argc, char *argv[]){
         image = argv[optind];
         optind++;
     }else{
-        perror(NO_IMG);
         printf(USAGE);
         return EXIT_FAILURE;
     }
@@ -88,6 +87,8 @@ int main(int argc, char *argv[]){
         }
         memset(min_path, 0, path_len + 1);
         strncpy(min_path, argv[optind], path_len);
+    }else{
+        min_path = DEF_PATH;
     }
 
     /* open image file, therefore checking if it
@@ -121,18 +122,16 @@ int main(int argc, char *argv[]){
        search starting from root by parsing
        path given 
     ***/
-
-    if(min_path == NULL){
-        find_file(DEF_PATH, image_file, disk_start * SECTOR_SIZE, isV);
-    }else{
-        find_file(min_path, image_file,  disk_start * SECTOR_SIZE, isV);
-    }
+    find_file(min_path, image_file,  disk_start * SECTOR_SIZE, isV);
 
     /* MINLS SPECIFIC 
        get type of file and other information about it.
        if it is a directory, print information about each file in it,
        if it isn't print out information of file */
 
-    free(min_path);
+    if(min_path != DEF_PATH){
+        free(min_path);
+    }
+
     return 0;
 }

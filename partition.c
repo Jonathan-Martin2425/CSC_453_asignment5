@@ -97,9 +97,6 @@ int partition_finder(char *img, int part_num, int sub_part,
         }
         
         /* traverse to subpartition's partition table */ 
-        if(isV){
-            printf("\nfirst_sec: %d\n\n", first_sec);
-        }
         location = (off_t)first_sec * SECTOR_SIZE;
         r = lseek(fd, location, SEEK_SET);
         

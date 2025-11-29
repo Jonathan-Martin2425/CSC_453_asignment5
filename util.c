@@ -1,6 +1,63 @@
 
 #include "util.h"
 
+/* */
+void *read_file(FILE *image, 
+                struct inode *node, 
+                struct superblock *super, 
+                off_t disk_start){
+    uint32_t zone_size = super->blocksize << super->log_zone_size;
+    int num_zones, i;
+    intptr_t res_offset;
+    void *res;
+
+    /* calculates zones allocated to file from given size
+       by doing floor division on zone_size and rounding up*/
+    num_zones = (node->size + zone_size - 1) / zone_size;
+
+    /* allocates returning pointer with full 
+       potential file size allocated */
+    res = malloc((size_t)zone_size * num_zones);
+    if(res == NULL){
+        perror(MALLOCERR);
+        return NULL;
+    }
+
+    /* checks if only direct zones need to be read*/
+    if(num_zones <= DIRECT_ZONES){
+
+        /* iterates through each direct zone, fseeks to it
+           then reads it into the resulting buffer, never assuming
+           each zone is sequencial */
+        for(i = 0; i < num_zones; i++){
+            if(fseek(image, disk_start + (zone_size * node->zone[i]), SEEK_SET) < 0){
+                perror(FILEERR);
+                free(res);
+                return NULL;
+            }
+
+            res_offset = (intptr_t)res + zone_size * i;
+
+            /* check for 0 zone, and still write full zone of 0's
+                   to buffer instead */
+            if(node->zone[i] == 0){
+                memset((void*)res_offset, 0, zone_size);
+                continue;
+            }
+
+            if(fread((void*)res_offset, zone_size, 1, image) <= 0){
+                perror(READERR);
+                free(res);
+                return NULL;
+            }
+        }
+    }else{
+        /* read indirect zone and maybe double indirect too*/
+    }
+
+    return res;
+}
+
 /* given the start position of the disk and the opened image file,
    returns an allocated struct of the superblock if it is valid*/
 struct superblock *get_superblock(FILE *image, off_t disk_start, int isV){
@@ -36,6 +93,7 @@ struct superblock *get_superblock(FILE *image, off_t disk_start, int isV){
         return super;
     }else{
         free(super);
+        perror(SUPERERR);
         return NULL;
     }
 }
@@ -58,7 +116,10 @@ off_t get_inode_table_start(struct superblock *super, off_t disk_start){
 int find_file(char *path, FILE *image, off_t disk_start, int isV){
     struct superblock *super;
     off_t inode_offset;
-    struct inode *inode_table;
+    struct inode *inode_table, *cur_inode;
+    uint32_t zone_size;
+    void *file_zones;
+    int potential_dir_entries, i, cur_dir_inode;
 
     /* get superblock from start of disk*/
     super = get_superblock(image, disk_start, isV);
@@ -89,8 +150,34 @@ int find_file(char *path, FILE *image, off_t disk_start, int isV){
        by parsing the path */
     if(isV){
         print_inode(inode_table[0]);
-    }    
+    }
 
+    cur_inode = inode_table + 0; /* redundant, but shows it is root*/
+
+    file_zones = read_file(image, cur_inode, super, disk_start);
+    if(file_zones == NULL){
+        return EXIT_FAILURE;
+    }
+
+    /* temporary verbose option, goes through root DIR, assuming it is a dir,
+       and prints each inode in the DIR along with its name */
+    if(isV){
+        potential_dir_entries = (cur_inode->size + 
+                                    sizeof(struct dir_entry) - 1 ) /  
+                                    sizeof(struct dir_entry);
+
+        for(i = 0; i < potential_dir_entries; i++){
+            cur_dir_inode = ((struct dir_entry*)file_zones)[i].inode;
+            if(cur_dir_inode != 0 && cur_dir_inode <= super->ninodes){
+                fprintf(stderr, STR_ATTRIBUTE_PRINT,
+                     "name", 
+                     ((struct dir_entry*)file_zones)[i].name);
+                print_inode(inode_table[cur_dir_inode]);
+            }
+        }
+    }
+
+    free(file_zones);
     free(super);
     free(inode_table);
 }

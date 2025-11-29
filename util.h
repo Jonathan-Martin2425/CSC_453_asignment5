@@ -19,12 +19,14 @@
 #define MALLOCERR "Malloc error"
 #define READERR "read error"
 #define FILEERR "FILE error"
+#define SUPERERR "Superblock magic number invalid. Not a MINIX file system"
 #define NO_PART -1
 
 #define SUB_PART_PRINT "Subparition table %d: \n"
 #define PART_PRINT "partion table:\n"
 #define PART_ENTRY_PRINT "\tpartition entry: %d\n"
 #define ACTUAL_PART_ENTRY "\tpartition entry: %d (selected partiton)\n"
+#define STR_ATTRIBUTE_PRINT "\t\t%s: %s\n"
 #define NUM_ATTRIBUTE_PRINT "\t\t%s: %d\n"
 #define HEX_ATTRIBUTE_PRINT "\t\t%s: 0x%X\n"
 #define MODE_ATTRIBUTE_PRINT "\t\tuint16_t mode: 0x%X (%s)\n"
@@ -73,6 +75,12 @@ struct inode {
     uint32_t unused;
 };
 
+struct dir_entry {
+    uint32_t inode;
+    unsigned char name[60];
+};
+
+void *read_file(FILE *, struct inode *, struct superblock *, off_t);
 struct superblock *get_superblock(FILE *, off_t, int);
 off_t get_inode_table(struct superblock *, off_t);
 int find_file(char *, FILE *, off_t , int);
