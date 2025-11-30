@@ -17,14 +17,6 @@
 #define MAX_PART 4
 #define DEF_PATH "/"
 
-#ifndef FALSE
-#define FALSE 0
-#endif
-
-#ifndef TRUE
-#define TRUE 1
-#endif
-
 int main(int argc, char *argv[]){
     int option, path_len;
     extern int optind;
@@ -34,6 +26,7 @@ int main(int argc, char *argv[]){
     FILE *image_file;
     uint32_t disk_start, part_size;
     struct superblock *superblock;
+    struct inode found_file;
     off_t inode_table_offset;
 
     /* parses all options using getopt and
@@ -122,7 +115,13 @@ int main(int argc, char *argv[]){
        search starting from root by parsing
        path given 
     ***/
-    find_file(min_path, image_file,  disk_start * SECTOR_SIZE, isV);
+    if(find_file(min_path, 
+                 image_file,  
+                 disk_start * SECTOR_SIZE, 
+                 &found_file, 
+                 isV) == EXIT_FAILURE){
+        return EXIT_FAILURE;
+    }
 
     /* MINLS SPECIFIC 
        get type of file and other information about it.

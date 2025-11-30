@@ -195,5 +195,6 @@ void print_part_table(int fd, off_t table_offset, int part, int subPart){
         fprintf(stderr, NUM_ATTRIBUTE_PRINT, "end_cyl", buf[i].end_cyl);
         fprintf(stderr, NUM_ATTRIBUTE_PRINT, "lFirst", buf[i].lFirst);
         fprintf(stderr, NUM_ATTRIBUTE_PRINT, "size", buf[i].size);
+        fprintf(stderr, NEW_LINE);
     }
 }

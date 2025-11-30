@@ -113,13 +113,22 @@ off_t get_inode_table_start(struct superblock *super, off_t disk_start){
     return inode_offset;
 }
 
-int find_file(char *path, FILE *image, off_t disk_start, int isV){
+int find_file(char *path, 
+              FILE *image, 
+              off_t disk_start,
+              struct inode *res, 
+              int isV){
     struct superblock *super;
-    off_t inode_offset;
     struct inode *inode_table, *cur_inode;
+    struct dir_entry *entry;
+    off_t inode_offset;
     uint32_t zone_size;
     void *file_zones;
-    int potential_dir_entries, i, cur_dir_inode;
+    int potential_dir_entries, i, found_entry;
+    char *token;
+
+    /* invalid usage */
+    if(res == NULL) return EXIT_FAILURE;
 
     /* get superblock from start of disk*/
     super = get_superblock(image, disk_start, isV);
@@ -134,50 +143,102 @@ int find_file(char *path, FILE *image, off_t disk_start, int isV){
     inode_table = malloc(sizeof(struct inode) * super->ninodes);
     if(inode_table == NULL){
         perror(MALLOCERR);
-        return NULL;
+        free(super);
+        return EXIT_FAILURE;
     }
     if(fseek(image, inode_offset, SEEK_SET) < 0){
         perror(FILEERR);
-        return NULL;
+        free(super);
+        return EXIT_FAILURE;
     }
     if(fread((void*)inode_table, sizeof(struct inode), super->ninodes, image) <= 0){
         perror(READERR);
-        return NULL;
-    }
-
-    /* read the 1st inode(root), verify it is a DIR 
-       and start recursivley searching for the file
-       by parsing the path */
-    if(isV){
-        print_inode(inode_table[0]);
-    }
-
-    cur_inode = inode_table + 0; /* redundant, but shows it is root*/
-
-    file_zones = read_file(image, cur_inode, super, disk_start);
-    if(file_zones == NULL){
+        free(super);
         return EXIT_FAILURE;
     }
 
-    /* temporary verbose option, goes through root DIR, assuming it is a dir,
-       and prints each inode in the DIR along with its name */
-    if(isV){
+    cur_inode = inode_table; /* setting cur_inode to root*/
+
+    /* search through each token/dir in path
+       until the last token is found and erroring
+       otherwise */
+    token = strtok(path, PATH_DELIM);
+    while(token != NULL){
+        /* extra slashes case, so go onto next token*/
+        if(strlen(token) == 0){
+            token = strtok(NULL, PATH_DELIM);
+            continue;
+        }
+
+        /* check if cur_inode is a DIR to continue search */
+        if((cur_inode->mode & FILE_TYPE_MASK) != DIR_MASK){
+            perror(DIRERR);
+            free(super);
+            free(inode_table);
+            return EXIT_FAILURE;
+        }
+
+        /* read cur_inode datazones to start DIR search*/
+        file_zones = read_file(image, cur_inode, super, disk_start);
+        if(file_zones == NULL){
+            free(super);
+            free(inode_table);
+            return EXIT_FAILURE;
+        }
+
+        /* start searching through each DIR entry and check if the name
+           is the same as the token*/
         potential_dir_entries = (cur_inode->size + 
                                     sizeof(struct dir_entry) - 1 ) /  
                                     sizeof(struct dir_entry);
-
+        found_entry = FALSE;
         for(i = 0; i < potential_dir_entries; i++){
-            cur_dir_inode = ((struct dir_entry*)file_zones)[i].inode;
-            if(cur_dir_inode != 0 && cur_dir_inode <= super->ninodes){
-                fprintf(stderr, STR_ATTRIBUTE_PRINT,
-                     "name", 
-                     ((struct dir_entry*)file_zones)[i].name);
-                print_inode(inode_table[cur_dir_inode]);
+            entry = (struct dir_entry*)((intptr_t)file_zones +
+                     (sizeof(struct dir_entry) * i));
+
+            /* deleted file*/
+            if(entry->inode == 0){
+                continue;
+            }
+            
+            /* inode that is too large */
+            if(entry->inode > super->ninodes){
+                perror(INODEERR);
+                free(file_zones);
+                free(super);
+                free(inode_table);
+                return EXIT_FAILURE;
+
+            }
+
+            /* inode with same name as token */
+            if (strncmp(token, entry->name, NAME_SIZE) == 0) {
+                cur_inode = (struct inode*)((intptr_t)inode_table + 
+                        sizeof(struct inode) * (entry->inode - 1));
+                found_entry = TRUE;
+                free(file_zones);
+                break;
             }
         }
+
+        /* check if the file is found before continuing
+           to the next file */
+        if(!found_entry){
+            perror(FILENOTFOUNDERR);
+            free(file_zones);
+            free(super);
+            free(inode_table);
+            return EXIT_FAILURE;
+        }
+        token = strtok(NULL, PATH_DELIM);
     }
 
-    free(file_zones);
+    /* sets result to res and print out verbose option*/
+    if(isV){
+        print_inode(*cur_inode);
+    }
+    *res = *cur_inode;
+
     free(super);
     free(inode_table);
 }
@@ -193,7 +254,8 @@ void print_superblock(struct superblock *super){
     fprintf(stderr, HEX_ATTRIBUTE_PRINT, "magic", super->magic);
     fprintf(stderr, NUM_ATTRIBUTE_PRINT, "zones", super->zones);
     fprintf(stderr, NUM_ATTRIBUTE_PRINT, "blocksize", super->blocksize);
-    fprintf(stderr, NUM_ATTRIBUTE_PRINT, "subversion", super->subversion);        
+    fprintf(stderr, NUM_ATTRIBUTE_PRINT, "subversion", super->subversion);     
+    fprintf(stderr, NEW_LINE);   
 }
 
 void print_inode(struct inode node){
@@ -219,4 +281,5 @@ void print_inode(struct inode node){
 
     fprintf(stderr, NUM_ATTRIBUTE_PRINT, "uint32_t indirect", node.indirect);
     fprintf(stderr, NUM_ATTRIBUTE_PRINT, "uint32_t two_indirect", node.two_indirect);
+    fprintf(stderr, NEW_LINE);
 }

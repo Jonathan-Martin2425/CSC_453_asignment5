@@ -15,18 +15,22 @@
 #define NUM_PART 4
 #define DIRECT_ZONES 7
 #define MODE_PRINT_SIZE 12
+#define NAME_SIZE 60
 #define FIRST_BLOCKS 2
 #define MALLOCERR "Malloc error"
 #define READERR "read error"
 #define FILEERR "FILE error"
 #define SUPERERR "Superblock magic number invalid. Not a MINIX file system"
+#define INODEERR "Invalid inode, inode number is greater than total ammount of inodes"
+#define DIRERR "File in path is not a DIR"
+#define FILENOTFOUNDERR "File couldn't be found"
 #define NO_PART -1
 
 #define SUB_PART_PRINT "Subparition table %d: \n"
 #define PART_PRINT "partion table:\n"
 #define PART_ENTRY_PRINT "\tpartition entry: %d\n"
 #define ACTUAL_PART_ENTRY "\tpartition entry: %d (selected partiton)\n"
-#define STR_ATTRIBUTE_PRINT "\t\t%s: %s\n"
+#define STR_ATTRIBUTE_PRINT "%s: %s\n"
 #define NUM_ATTRIBUTE_PRINT "\t\t%s: %d\n"
 #define HEX_ATTRIBUTE_PRINT "\t\t%s: 0x%X\n"
 #define MODE_ATTRIBUTE_PRINT "\t\tuint16_t mode: 0x%X (%s)\n"
@@ -35,10 +39,20 @@
 #define SUP_NAME "Superblock Contents:\nStored Fields:\n"
 #define ZONE_NAME "%s zones:\n"
 #define INODE_NAME "File inode:\n"
+#define PATH_DELIM "/"
+#define NEW_LINE "\n"
 
 #define FILE_TYPE_MASK 0xF000
 #define REG_MASK 0x8000
 #define DIR_MASK 0x4000
+
+#ifndef FALSE
+#define FALSE 0
+#endif
+
+#ifndef TRUE
+#define TRUE 1
+#endif
 
 struct superblock { /* Minix Version 3 Superblock
                     * this structure found in fs/super.h
@@ -83,6 +97,6 @@ struct dir_entry {
 void *read_file(FILE *, struct inode *, struct superblock *, off_t);
 struct superblock *get_superblock(FILE *, off_t, int);
 off_t get_inode_table(struct superblock *, off_t);
-int find_file(char *, FILE *, off_t , int);
+int find_file(char *, FILE *, off_t , struct inode *, int);
 void print_superblock(struct superblock *);
 void print_inode(struct inode);
