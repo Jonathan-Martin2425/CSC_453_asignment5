@@ -43,6 +43,15 @@
 #define PATH_DELIM "/"
 #define NEW_LINE "\n"
 
+#define TYPE_INVAL "Invalid partition type\n"
+#define SIZE_INVAL "Invalid partition size\n"
+#define PSIG_INVAL "Partition table does not have valid signature\n"
+#define PNUM_INVAL "Invalid partition number\n"
+#define SPNUM_INVAL "Invalid subpartition number\n"
+#define SUB_MBR_INVAL "Invalid SUB MBR signature\n"
+#define READ_ERR "Error reading from file\n"
+#define SP_TABLE_ERR "Error finding subpartition table\n" 
+
 #define FILE_TYPE_MASK 0xF000
 #define REG_MASK 0x8000
 #define DIR_MASK 0x4000

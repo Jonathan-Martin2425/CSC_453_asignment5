@@ -42,7 +42,7 @@ int partition_finder(char *img, int part_num, int sub_part,
     r = read(fd, mbr, MBR_SIZE);
     if (r != MBR_SIZE) {
         close(fd);
-        perror("Error reading from file");
+        fprintf(stderr, READ_ERR);
         return EXIT_FAILURE;
     }
 
@@ -56,14 +56,14 @@ int partition_finder(char *img, int part_num, int sub_part,
     if (mbr[PART_TABLE_SIG_OFFSET] != VALID_PART_BYTE_ONE || 
         mbr[PART_TABLE_SIG_OFFSET + 1] != VALID_PART_BYTE_TWO) {
         close(fd);
-        perror("Partition table does not have valid signature");
+        fprintf(stderr, PSIG_INVAL);
         return EXIT_FAILURE;
     }
 
     /* check validity of partition number */
     if (part_num < 0 || part_num > 3) {
         close(fd);
-        perror("Invalid partition number");
+        fprintf(stderr, PNUM_INVAL);
         return EXIT_FAILURE;
     }
     
@@ -74,7 +74,7 @@ int partition_finder(char *img, int part_num, int sub_part,
     
     if (part_type != MINIX_TYPE) {
         close(fd);
-        perror("Partition is not of type MINIX");
+        fprintf(stderr, TYPE_INVAL);
         return EXIT_FAILURE;
     }
     
@@ -84,7 +84,7 @@ int partition_finder(char *img, int part_num, int sub_part,
 
     if (psize == 0) {
         close(fd);
-        perror("Partition size is too small");
+        fprintf(stderr, SIZE_INVAL);
         return EXIT_FAILURE;
     }
 
@@ -92,7 +92,7 @@ int partition_finder(char *img, int part_num, int sub_part,
     if (sub_part != -1) {
         if (sub_part < 0 || sub_part > 3) {
             close(fd);
-            perror("Invalid subpartition number");
+            fprintf(stderr, SPNUM_INVAL);
             return EXIT_FAILURE;
         }
         
@@ -102,7 +102,7 @@ int partition_finder(char *img, int part_num, int sub_part,
         
         if (r == (off_t)-1) {
             close(fd);
-            perror("Error finding subpartition table");
+            fprintf(stderr, SP_TABLE_ERR);
             return EXIT_FAILURE;
         }
         
@@ -110,7 +110,7 @@ int partition_finder(char *img, int part_num, int sub_part,
         r = read(fd, sub_mbr, MBR_SIZE);
         if (r != MBR_SIZE) {
             close(fd);
-            perror("Error reading from file");
+            fprintf(stderr, READ_ERR);
             return EXIT_FAILURE;
         }
 
@@ -122,7 +122,7 @@ int partition_finder(char *img, int part_num, int sub_part,
         if (sub_mbr[PART_TABLE_SIG_OFFSET] != VALID_PART_BYTE_ONE || 
             sub_mbr[PART_TABLE_SIG_OFFSET + 1] != VALID_PART_BYTE_TWO) {
             close(fd);
-            perror("Invalid SUB MBR signature");
+            fprintf(stderr, SUB_MBR_INVAL);
             return EXIT_FAILURE;
         }
 
@@ -134,13 +134,13 @@ int partition_finder(char *img, int part_num, int sub_part,
         
         if (sub_type != MINIX_TYPE) {
             close(fd);
-            perror("Subpartition is not of type MINIX");
+            fprintf(stderr, TYPE_INVAL);
             return EXIT_FAILURE;
         }
 
         if (sub_psize == 0) {
             close(fd);
-            perror("Subpartition size is invalid size");
+            fprintf(stderr, SIZE_INVAL);
             return EXIT_FAILURE;
         }
 
@@ -164,12 +164,12 @@ void print_part_table(int fd, off_t table_offset, int part, int subPart){
     int i;
 
     if(lseek(fd, table_offset, SEEK_SET) < 0){
-        perror(FILEERR);
+        fprintf(stderr, FILEERR);
         return;
     }
 
     if(read(fd, &buf, sizeof(struct partition_entry) * NUM_PART) < 0){
-        perror(FILEERR);
+        fprintf(stderr, FILEERR);
         return;
     }
 
