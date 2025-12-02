@@ -51,10 +51,23 @@
 #define SUB_MBR_INVAL "Invalid SUB MBR signature\n"
 #define READ_ERR "Error reading from file\n"
 #define SP_TABLE_ERR "Error finding subpartition table\n" 
+#define LS_TYPE_INVAL "Given path is not a file or directory\n"
 
 #define FILE_TYPE_MASK 0xF000
 #define REG_MASK 0x8000
 #define DIR_MASK 0x4000
+
+#define OWNER_READ  0x100
+#define OWNER_WRITE 0x80
+#define OWNER_EXEC  0x40
+#define GROUP_READ  0x20
+#define GROUP_WRITE 0x10
+#define GROUP_EXEC  0x8
+#define OTHER_READ  0x4
+#define OTHER_WRITE 0x2
+#define OTHER_EXEC  0x1
+
+
 
 #ifndef FALSE
 #define FALSE 0
