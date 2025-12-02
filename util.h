@@ -42,6 +42,7 @@
 #define INODE_NAME "File inode:\n"
 #define PATH_DELIM "/"
 #define NEW_LINE "\n"
+#define REG_FILE_PRINT "%s %s %s\n"
 
 #define TYPE_INVAL "Invalid partition type\n"
 #define SIZE_INVAL "Invalid partition size\n"

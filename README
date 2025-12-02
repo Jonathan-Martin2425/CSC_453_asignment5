@@ -16,3 +16,6 @@ Minix partition structure
   there is only 1 partions and 3 sub partitions that actually exist on the controller image
   so if we want to test giving no partitions, we input /dev/c0d0p0s0, /dev/c0d0p0s1 or /dev/c0d0p0s2
 
+
+for minls, i wrote the print file code, havent done print dir code but ill do it on tuesday
+also wrote a function to format path names, canonicalizer(), idk if you need it

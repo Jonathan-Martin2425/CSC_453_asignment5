@@ -15,7 +15,8 @@
 #define INITIALDISK 0
 #define MAX_PART 4
 #define DEF_PATH "/"
-#define PERM_STRING_SIZE 10
+#define PERM_STRING 11
+#define SIZE_STRING 10
 
 int main(int argc, char *argv[]) {
     int option, path_len;
@@ -86,6 +87,7 @@ int main(int argc, char *argv[]) {
         memset(path_name, 0, path_len + 1);
         strncpy(min_path, argv[optind], path_len);
         strncpy(path_name, argv[optind], path_len);
+        canonicalizer(path_name);
     } else {
         min_path = DEF_PATH;
         path_name = DEF_PATH;
@@ -136,9 +138,9 @@ int main(int argc, char *argv[]) {
        if it is a directory, print information about each file in it,
        if it isn't print out information of file */
     if ((found_file.mode & FILE_TYPE_MASK) == DIR_MASK) {
-        print_dir(found_file);
+        print_dir(found_file, path_name);
     } else if ((found_file.mode & FILE_TYPE_MASK) == REG_MASK) {
-        print_reg_file(found_file);
+        print_reg_file(found_file, path_name);
     } else {
         perror(LS_TYPE_INVAL);
         return EXIT_FAILURE;
@@ -148,15 +150,32 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
+/* Prints the given file in "[permissions] [size] [filename]" format. 
+ * Assumes filename is null terminated */
 void print_reg_file(struct inode file, char *name) {
-    char perms[PERM_STRING_SIZE];
+    char perms[PERM_STRING];
+    char size[SIZE_STRING];
     uint32_t file_size;
-
+    /* MAKE SURE YOU GET RID OF THE LEADING SLASH IF PRINTING A REGULAR FILE
+ *
+ *
+ *
+ *
+ *
+ *
+ * MAKE SURE YOU GET RID OF THE LEADING SLASH IF PRINTING A REGULAR FILE
+ *
+ * */
     perms_print(file.mode, perms);
-    
+
+    file_size = file.size;
+    sprintf(size, "%9u", file_size);
+    size[9] = '\0';
+
+    printf(REG_FILE_PRINT, perms, size, name);
 }
 
-void print_dir(struct inode file) {
+void print_dir(struct inode file, char *name) {
     
 }
 
@@ -171,6 +190,7 @@ void perms_print(uint16_t mode, char *buf) {
     buf[7] = (mode & OTHER_READ)  ? 'r' : '-';
     buf[8] = (mode & OTHER_WRITE) ? 'w' : '-';
     buf[9] = (mode & OTHER_EXEC)  ? 'x' : '-';
+    buf[10] = '\0';
 }
 
 /* Removes duplicate slashes, adds slash at 
@@ -181,13 +201,15 @@ void canonicalizer(char *original) {
     length = strlen(original);
     copy = calloc(length + 2, sizeof(char));
     
+    /* ensure both strings start with a slash */
     if (original[i] != '/') {
         copy[j++] = '/';
     } else {
         i++;
         j++;
     }
-    
+   
+    /* copy one char at a time, dont copy if its a repeated slash */ 
     prev = '/';
     while (i < length) {
         if (!(original[i] == '/' && prev == '/')) {
@@ -196,6 +218,7 @@ void canonicalizer(char *original) {
         i++;
     }
     
+    /* Remove slash if there, and add null term. */
     if (j > 1 && copy[j - 1] == '/') {
         j--;
     }
