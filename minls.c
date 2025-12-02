@@ -18,6 +18,13 @@
 #define PERM_STRING 11
 #define SIZE_STRING 10
 
+/* defineing all functions used in main before
+   writing later for style purposes*/
+void print_reg_file(struct inode, char *);
+void print_dir(struct inode, char *);
+void perms_print(uint16_t, char *buf);
+void canonicalizer(char *);
+
 int main(int argc, char *argv[]) {
     int option, path_len;
     extern int optind;

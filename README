@@ -19,3 +19,6 @@ Minix partition structure
 
 for minls, i wrote the print file code, havent done print dir code but ill do it on tuesday
 also wrote a function to format path names, canonicalizer(), idk if you need it
+
+btw, for printing the mode of a file you could've just used "strmode"
+I use it in "print_inode" in util.c if you wanna see how its used
