@@ -23,6 +23,7 @@
 #define SUPERERR "Superblock magic number invalid. Not a MINIX file system"
 #define INODEERR "Invalid inode, inode number is greater than total ammount of inodes"
 #define DIRERR "File in path is not a DIR"
+#define TOOBIG "File has a size greater than the max possible size"
 #define FILENOTFOUNDERR "File couldn't be found"
 #define NO_PART -1
 
@@ -94,6 +95,7 @@ struct dir_entry {
     unsigned char name[60];
 };
 
+int read_zone(FILE *, off_t, uint32_t, uint32_t, void*);
 void *read_file(FILE *, struct inode *, struct superblock *, off_t);
 struct superblock *get_superblock(FILE *, off_t, int);
 off_t get_inode_table(struct superblock *, off_t);

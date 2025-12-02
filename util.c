@@ -1,15 +1,55 @@
 
 #include "util.h"
 
+int read_zone(FILE *image, 
+              off_t disk_start, 
+              uint32_t zone_size, 
+              uint32_t zone, 
+              void *buf){
+
+    /* check for 0 zone, and still write full zone of 0's
+       to buffer instead */
+    if(zone == 0){
+        memset((void*)buf, 0, zone_size);
+        return EXIT_SUCCESS;
+    }
+
+    /* seek to correct zone from given information*/
+    if(fseek(image, disk_start + (zone_size * zone), SEEK_SET) < 0){
+        perror(FILEERR);
+        return EXIT_FAILURE;
+    }
+
+    /* read into the buffer given assuming 
+       it has at least zone_size space in it*/
+    if(fread((void*)buf, zone_size, 1, image) <= 0){
+        perror(READERR);
+        return EXIT_FAILURE;
+    }
+
+    return EXIT_SUCCESS;
+}
+
 /* */
 void *read_file(FILE *image, 
                 struct inode *node, 
                 struct superblock *super, 
                 off_t disk_start){
-    uint32_t zone_size = super->blocksize << super->log_zone_size;
-    int num_zones, i;
+    int num_zones, i, cur_zone, indirect_num_zones, double_table_index;
     intptr_t res_offset;
     void *res;
+    uint32_t *indirect_zone_table = NULL, *double_indirect_table = NULL;
+    uint32_t zone_size = super->blocksize << super->log_zone_size;
+
+    /* checks if file has a valid size before trying to read it*/
+    if(node->size > super->max_file){
+        perror(TOOBIG);
+        return NULL;
+    }
+
+    /* calculates how many zone numbers an indirect zone block
+       holds from the blocksize, rounding down */
+    indirect_num_zones = super->blocksize / sizeof(uint32_t);
 
     /* calculates zones allocated to file from given size
        by doing floor division on zone_size and rounding up*/
@@ -23,38 +63,121 @@ void *read_file(FILE *image,
         return NULL;
     }
 
-    /* checks if only direct zones need to be read*/
-    if(num_zones <= DIRECT_ZONES){
+    for(i = 0; i < num_zones; i++){
+        /* check for which zone number to take from, being either
+           from the direct, indirect or double_indirect zones*/
+        if(i < DIRECT_ZONES){
+            cur_zone = node->zone[i];
+        }else if(i < indirect_num_zones + DIRECT_ZONES){
 
-        /* iterates through each direct zone, fseeks to it
-           then reads it into the resulting buffer, never assuming
-           each zone is sequencial */
-        for(i = 0; i < num_zones; i++){
-            if(fseek(image, disk_start + (zone_size * node->zone[i]), SEEK_SET) < 0){
-                perror(FILEERR);
-                free(res);
-                return NULL;
+            /* checks if the indirect table zone has been read yet
+               then reads it if it hasn't before continuing*/
+            if(indirect_zone_table == NULL){
+                indirect_zone_table = malloc(zone_size);
+                if(indirect_zone_table == NULL){
+                    free(res);
+                    perror(MALLOCERR);
+                    return NULL;
+                }
+
+                if(read_zone(image,
+                        disk_start, 
+                        zone_size,
+                        node->indirect, 
+                        indirect_zone_table) == EXIT_FAILURE){
+                    free(res);
+                    free(indirect_zone_table);
+                    return NULL;
+                }
             }
 
-            res_offset = (intptr_t)res + zone_size * i;
+            cur_zone = indirect_zone_table[i - DIRECT_ZONES];
+        }else{
 
-            /* check for 0 zone, and still write full zone of 0's
-                   to buffer instead */
-            if(node->zone[i] == 0){
-                memset((void*)res_offset, 0, zone_size);
-                continue;
+            /* if double_indirect table hasn't been read,
+               read it and initialize index */
+            if(double_indirect_table == NULL){
+                double_indirect_table = malloc(zone_size);
+                if(double_indirect_table == NULL){
+                    free(res);
+                    free(indirect_zone_table);
+                    perror(MALLOCERR);
+                    return NULL;
+                }
+
+                if(read_zone(image,
+                        disk_start, 
+                        zone_size,
+                        node->two_indirect, 
+                        double_indirect_table) == EXIT_FAILURE){
+                    free(res);
+                    free(indirect_zone_table);
+                    free(double_indirect_table);
+                    return NULL;
+                }
+
+                double_table_index = 0;
             }
 
-            if(fread((void*)res_offset, zone_size, 1, image) <= 0){
-                perror(READERR);
-                free(res);
-                return NULL;
+            /* if needed, read new table from zone in double indirect table*/
+            if((i - DIRECT_ZONES) % indirect_num_zones == 0){
+                /* free previous table, then check if the index is too large*/
+                free(indirect_zone_table);
+                if(double_table_index >= indirect_num_zones){
+                    /* should realistically never happen
+                       due to the max_file in the superblock*/
+                    perror(TOOBIG);
+                    free(res);
+                    free(double_indirect_table);
+                    return NULL;
+                }
+
+                /* allocate zone to read double indirect table 
+                   into then read it using the value in
+                   the double indirect table index */
+                indirect_zone_table = malloc(zone_size);
+                if(indirect_zone_table == NULL){
+                    free(res);
+                    free(double_indirect_table);
+                    perror(MALLOCERR);
+                    return NULL;
+                }
+                if(read_zone(image,
+                        disk_start, 
+                        zone_size,
+                        double_indirect_table[double_table_index], 
+                        indirect_zone_table) == EXIT_FAILURE){
+                    free(res);
+                    free(indirect_zone_table);
+                    free(double_indirect_table);
+                    return NULL;
+                }
+
+                /* increment double indirect table index for next iteration */
+                double_table_index++;
             }
+
+            cur_zone = indirect_zone_table[(i - DIRECT_ZONES) %
+                                            indirect_num_zones];
         }
-    }else{
-        /* read indirect zone and maybe double indirect too*/
+
+        /* calculate next to zone to read into result
+           then read zone */
+        res_offset = (intptr_t)res + zone_size * i;
+        if(read_zone(image,
+                     disk_start, 
+                     zone_size,
+                     cur_zone, 
+                     (void*)res_offset) == EXIT_FAILURE){
+            free(res);
+            free(indirect_zone_table);
+            free(double_indirect_table);
+            return NULL;
+        }
     }
 
+    free(indirect_zone_table);
+    free(double_indirect_table);
     return res;
 }
 
@@ -108,7 +231,8 @@ off_t get_inode_table_start(struct superblock *super, off_t disk_start){
        plus the blocks allocated by the superblock, inode bitmap
        and zone bitmap found in the superblock*/
     inode_offset = disk_start + 
-                   block_size * (FIRST_BLOCKS + super->i_blocks + super->z_blocks);
+                   block_size * (FIRST_BLOCKS + 
+                                 super->i_blocks + super->z_blocks);
 
     return inode_offset;
 }
@@ -151,7 +275,9 @@ int find_file(char *path,
         free(super);
         return EXIT_FAILURE;
     }
-    if(fread((void*)inode_table, sizeof(struct inode), super->ninodes, image) <= 0){
+    if(fread((void*)inode_table, 
+             sizeof(struct inode), 
+             super->ninodes, image) <= 0){
         perror(READERR);
         free(super);
         return EXIT_FAILURE;
@@ -212,7 +338,7 @@ int find_file(char *path,
             }
 
             /* inode with same name as token */
-            if (strncmp(token, entry->name, NAME_SIZE) == 0) {
+            if (strncmp(token, (char*)entry->name, NAME_SIZE) == 0) {
                 cur_inode = (struct inode*)((intptr_t)inode_table + 
                         sizeof(struct inode) * (entry->inode - 1));
                 found_entry = TRUE;
@@ -249,12 +375,13 @@ void print_superblock(struct superblock *super){
     fprintf(stderr, NUM_ATTRIBUTE_PRINT, "i_blocks", super->i_blocks);
     fprintf(stderr, NUM_ATTRIBUTE_PRINT, "z_blocks", super->z_blocks);
     fprintf(stderr, NUM_ATTRIBUTE_PRINT, "firstdata", super->firstdata);
-    fprintf(stderr, NUM_ATTRIBUTE_PRINT, "log_zone_size", super->log_zone_size);
+    fprintf(stderr, NUM_ATTRIBUTE_PRINT, 
+            "log_zone_size", super->log_zone_size);
     fprintf(stderr, NUM_ATTRIBUTE_PRINT, "max_file", super->max_file);
     fprintf(stderr, HEX_ATTRIBUTE_PRINT, "magic", super->magic);
     fprintf(stderr, NUM_ATTRIBUTE_PRINT, "zones", super->zones);
     fprintf(stderr, NUM_ATTRIBUTE_PRINT, "blocksize", super->blocksize);
-    fprintf(stderr, NUM_ATTRIBUTE_PRINT, "subversion", super->subversion);     
+    fprintf(stderr, NUM_ATTRIBUTE_PRINT, "subversion", super->subversion);
     fprintf(stderr, NEW_LINE);   
 }
 
@@ -269,17 +396,22 @@ void print_inode(struct inode node){
     fprintf(stderr, NUM_ATTRIBUTE_PRINT, "uint16_t uid", node.uid);
     fprintf(stderr, NUM_ATTRIBUTE_PRINT, "uint16_t gid", node.gid);
     fprintf(stderr, NUM_ATTRIBUTE_PRINT, "uint32_t size", node.size);
-    fprintf(stderr, TIME_ATTRIBUTE_PRINT, "uint32_t atime", node.atime, ctime((time_t*)&node.atime));
-    fprintf(stderr, TIME_ATTRIBUTE_PRINT, "uint32_t mtime", node.mtime, ctime((time_t*)&node.mtime));
-    fprintf(stderr, TIME_ATTRIBUTE_PRINT, "uint32_t ctime", node.ctime, ctime((time_t*)&node.ctime));
+    fprintf(stderr, TIME_ATTRIBUTE_PRINT, "uint32_t atime",
+         node.atime, ctime((time_t*)&node.atime));
+    fprintf(stderr, TIME_ATTRIBUTE_PRINT, "uint32_t mtime",
+         node.mtime, ctime((time_t*)&node.mtime));
+    fprintf(stderr, TIME_ATTRIBUTE_PRINT, "uint32_t ctime",
+         node.ctime, ctime((time_t*)&node.ctime));
 
-    /*zones */
+    /* zones */
     fprintf(stderr, ZONE_NAME, "Direct");
     for(i = 0; i < DIRECT_ZONES; i++){
         fprintf(stderr, ZONE_ATTRIBUTE_PRINT, i, node.zone[i]);
     }
 
-    fprintf(stderr, NUM_ATTRIBUTE_PRINT, "uint32_t indirect", node.indirect);
-    fprintf(stderr, NUM_ATTRIBUTE_PRINT, "uint32_t two_indirect", node.two_indirect);
+    fprintf(stderr, NUM_ATTRIBUTE_PRINT,
+         "uint32_t indirect", node.indirect);
+    fprintf(stderr, NUM_ATTRIBUTE_PRINT, 
+        "uint32_t two_indirect", node.two_indirect);
     fprintf(stderr, NEW_LINE);
 }

@@ -12,7 +12,6 @@
 #define NO_IMG "an image file must be provided"
 #define MALLOCERR "Malloc error"
 #define OPENERR "open error"
-#define PRTVAR "%s: %s\n"
 #define INITIALDISK 0
 #define MAX_PART 4
 #define DEF_PATH "/"
@@ -113,7 +112,7 @@ int main(int argc, char *argv[]){
     /***  
        search and verify super block, then
        search starting from root by parsing
-       path given 
+       path given to get inode of file
     ***/
     if(find_file(min_path, 
                  image_file,  
@@ -127,10 +126,20 @@ int main(int argc, char *argv[]){
        get type of file and other information about it.
        if it is a directory, print information about each file in it,
        if it isn't print out information of file */
-
-    if(min_path != DEF_PATH){
-        free(min_path);
+    if((found_file.mode & FILE_TYPE_MASK) == DIR_MASK){
+        print_dir(found_file);
+    }else{
+        print_reg_file(found_file);
     }
 
+    free(min_path);
     return 0;
+}
+
+void print_reg_file(struct inode file){
+
+}
+
+void print_dir(struct inode file){
+    
 }
