@@ -21,7 +21,8 @@
 #define READERR "read error"
 #define FILEERR "FILE error"
 #define SUPERERR "Superblock magic number invalid. Not a MINIX file system"
-#define INODEERR "Invalid inode, inode number is greater than total ammount of inodes"
+#define INODEERR "Invalid inode, inode number is " \
+                 "greater than total ammount of inodes"
 #define DIRERR "File in path is not a DIR"
 #define TOOBIG "File has a size greater than the max possible size"
 #define FILENOTFOUNDERR "File couldn't be found"
