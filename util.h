@@ -26,6 +26,7 @@
 #define DIRERR "File in path is not a DIR"
 #define TOOBIG "File has a size greater than the max possible size"
 #define FILENOTFOUNDERR "File couldn't be found"
+#define NAMEERR "File name is too long in path"
 #define NO_PART -1
 
 #define SUB_PART_PRINT "Subparition table %d: \n"
