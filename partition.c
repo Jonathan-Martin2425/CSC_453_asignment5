@@ -116,7 +116,8 @@ int partition_finder(char *img, int part_num, int sub_part,
 
         /* after reading MBR, print potential subpartition table */
         if(isV){
-            print_part_table(fd, location + PART_TABLE_OFFSET, sub_part, part_num);
+            print_part_table(fd, location + PART_TABLE_OFFSET,
+                             sub_part, part_num);
         }
         
         if (sub_mbr[PART_TABLE_SIG_OFFSET] != VALID_PART_BYTE_ONE || 

@@ -6,7 +6,8 @@
 #include "util.h"
 
 #define OPTSTR "vp:s:"
-#define USAGE "Usage: [ -v ] [ -p part [ -s subpart ] ] imagefile srcpath [ dstpath ]\n"
+#define USAGE "Usage: [ -v ] [ -p part [ -s subpart ] ] " \
+              "imagefile srcpath [ dstpath ]\n"
 #define PARTERR "partition must be between 0-3"
 #define SUBPARTERR "subpartition must be between 0-3"
 #define NO_IMG "an image file must be provided"
