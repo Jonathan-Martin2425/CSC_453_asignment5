@@ -280,5 +280,6 @@ int canonicalizer(char *original) {
 
     strncpy(original, copy, j + 1);
     free(copy);
+    return EXIT_SUCCESS;
 }
 

@@ -249,7 +249,6 @@ int find_file(char *path,
     struct inode *inode_table, *cur_inode;
     struct dir_entry *entry;
     off_t inode_offset;
-    uint32_t zone_size;
     void *file_zones;
     int potential_dir_entries, i, found_entry;
     char *token;
@@ -370,6 +369,7 @@ int find_file(char *path,
 
     free(super);
     free(inode_table);
+    return EXIT_SUCCESS;
 }
 
 void print_superblock(struct superblock *super){
