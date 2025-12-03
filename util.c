@@ -393,7 +393,7 @@ void print_inode(struct inode node){
     int i;
 
     fprintf(stderr, INODE_NAME);
-    strmode((mode_t)node.mode, buf);
+    perms_print(node.mode, buf);
     fprintf(stderr, MODE_ATTRIBUTE_PRINT, node.mode, buf);
     fprintf(stderr, NUM_ATTRIBUTE_PRINT, "uint16_t links", node.links);
     fprintf(stderr, NUM_ATTRIBUTE_PRINT, "uint16_t uid", node.uid);
@@ -417,4 +417,30 @@ void print_inode(struct inode node){
     fprintf(stderr, NUM_ATTRIBUTE_PRINT, 
         "uint32_t two_indirect", node.two_indirect);
     fprintf(stderr, NEW_LINE);
+}
+
+void perms_print(uint16_t mode, char *buf) {
+
+    buf[0] = ((mode & FILE_TYPE_MASK) == DIR_MASK) ? 'd' : '-';
+
+    buf[1] = (mode & OWNER_READ)  ? 'r' : '-';
+
+    buf[2] = (mode & OWNER_WRITE) ? 'w' : '-';
+
+    buf[3] = (mode & OWNER_EXEC)  ? 'x' : '-';
+
+    buf[4] = (mode & GROUP_READ)  ? 'r' : '-';
+
+    buf[5] = (mode & GROUP_WRITE) ? 'w' : '-';
+
+    buf[6] = (mode & GROUP_EXEC)  ? 'x' : '-';
+
+    buf[7] = (mode & OTHER_READ)  ? 'r' : '-';
+
+    buf[8] = (mode & OTHER_WRITE) ? 'w' : '-';
+
+    buf[9] = (mode & OTHER_EXEC)  ? 'x' : '-';
+
+    buf[10] = '\0';
+
 }

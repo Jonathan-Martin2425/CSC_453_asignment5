@@ -97,7 +97,7 @@ int main(int argc, char *argv[]) {
     /* open image file and destination file 
        if neccesary, therefore checking if
        they are valid */
-    if ((image_file = fopen(image, "r+w")) == NULL) {
+    if ((image_file = fopen(image, "r+")) == NULL) {
         perror(OPENERR);
         return EXIT_FAILURE;
     }

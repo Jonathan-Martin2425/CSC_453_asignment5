@@ -24,7 +24,6 @@
    writing later for style purposes*/
 void print_reg_file(struct inode *, char *);
 void print_dir(struct dir_entry *, struct inode *, off_t, char *);
-void perms_print(uint16_t, char *buf);
 int canonicalizer(char *);
 
 int main(int argc, char *argv[]) {
@@ -107,7 +106,7 @@ int main(int argc, char *argv[]) {
 
     /* open image file, therefore checking if it
        is valid */
-    if ((image_file = fopen(image, "r+w")) == NULL) {
+    if ((image_file = fopen(image, "r+")) == NULL) {
         perror(OPENERR);
         return EXIT_FAILURE;
     }
@@ -183,7 +182,6 @@ int main(int argc, char *argv[]) {
         }
 
         print_dir(dir_data, inode_table, possible_num_entries, path_name);
-
     } else if ((found_file.mode & FILE_TYPE_MASK) == REG_MASK) {
         print_reg_file(&found_file, path_name);
     } else {
@@ -191,7 +189,6 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    free(min_path);
     return 0;
 }
 
@@ -202,17 +199,21 @@ void print_reg_file(struct inode *file, char *name) {
     char size[SIZE_STRING];
     char name_buf[NAME_SIZE];
     uint32_t file_size;
-    strmode((mode_t)file->mode, perms);
+    perms_print(file->mode, perms);
     memset((void*)size, 0, SIZE_STRING);
 
     file_size = file->size;
     sprintf(size, "%9u", file_size);
 
-    /* only cpoies 1st 60 characters of name 
+    /* only copies the 1st 60 characters of name 
        since filenames are not NULL terminated
        sometimes */
     strncpy(name_buf, name, NAME_SIZE);
-    printf(REG_FILE_PRINT, perms, size, name);
+    if(name_buf[0] == SLASH){
+        printf(REG_FILE_PRINT, perms, size, &(name[1]));
+    }else{
+        printf(REG_FILE_PRINT, perms, size, name);
+    }
 }
 
 void print_dir(struct dir_entry *dir_data, 

@@ -125,3 +125,4 @@ off_t get_inode_table_start(struct superblock *, off_t);
 int find_file(char *, FILE *, off_t , struct inode *, int);
 void print_superblock(struct superblock *);
 void print_inode(struct inode);
+void perms_print(uint16_t, char *);
