@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
            will use strtok on in the
            "find_file" function */
         path_len = strlen(argv[optind]);
-        if ((int)(src = (char*)malloc(path_len + 1)) < 0) {
+        if ((intptr_t)(src = (char*)malloc(path_len + 1)) < 0) {
             perror(MALLOCERR);
             return EXIT_FAILURE;
         }

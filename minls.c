@@ -83,12 +83,12 @@ int main(int argc, char *argv[]) {
            string to new path string we
            will use strtok on */
         path_len = strlen(argv[optind]);
-        if ((int)(min_path = (char*)malloc(path_len + 1)) < 0) {
+        if ((intptr_t)(min_path = (char*)malloc(path_len + 1)) < 0) {
             perror(MALLOCERR);
             return EXIT_FAILURE;
         }
         /* Making two copies to have one for printing with */
-        if ((int)(path_name = (char*)malloc(path_len + 1)) < 0) {
+        if ((intptr_t)(path_name = (char*)malloc(path_len + 1)) < 0) {
             perror(MALLOCERR);
             return EXIT_FAILURE;
         }
