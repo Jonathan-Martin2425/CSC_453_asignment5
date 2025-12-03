@@ -76,10 +76,6 @@ int main(int argc, char *argv[]) {
            "find_file" function */
         path_len = strlen(argv[optind]);
 
-        if(path_len > NAME_SIZE){
-            perror(NAMEERR);
-            return EXIT_FAILURE;
-        }
         if ((intptr_t)(src = (char*)malloc(path_len + 1)) < 0) {
             perror(MALLOCERR);
             return EXIT_FAILURE;

@@ -248,7 +248,7 @@ int find_file(char *path,
     struct superblock *super;
     struct inode *inode_table, *cur_inode;
     struct dir_entry *entry;
-    off_t inode_offset;
+    off_t inode_offset, token_len;
     void *file_zones;
     int potential_dir_entries, i, found_entry;
     char *token;
@@ -293,9 +293,17 @@ int find_file(char *path,
     token = strtok(path, PATH_DELIM);
     while(token != NULL){
         /* extra slashes case, so go onto next token*/
-        if(strlen(token) == 0){
+        token_len = strlen(token);
+        if(token_len == 0){
             token = strtok(NULL, PATH_DELIM);
             continue;
+        }
+
+        if(token_len > NAME_SIZE){
+            perror(NAMEERR);
+            free(super);
+            free(inode_table);
+            return EXIT_FAILURE;
         }
 
         /* check if cur_inode is a DIR to continue search */
