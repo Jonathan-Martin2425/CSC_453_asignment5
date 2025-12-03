@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
             }
             break;
         default:
-            printf(USAGE);
+            fprintf(stderr, USAGE);
             return EXIT_FAILURE;
             break;
         }
@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
         image = argv[optind];
         optind++;
     } else {
-        printf(USAGE);
+        fprintf(stderr, USAGE);
         return EXIT_FAILURE;
     }
 
@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
         strncpy(src, argv[optind], path_len);
         optind++;
     } else {
-        printf(USAGE);
+        fprintf(stderr, USAGE);
         return EXIT_FAILURE;
     }
 
@@ -132,7 +132,7 @@ int main(int argc, char *argv[]) {
         } else {
             fclose(image_file);
             fclose(dest);
-            printf(USAGE);
+            fprintf(stderr, USAGE);
             return EXIT_FAILURE;
         }
     }
