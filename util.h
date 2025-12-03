@@ -35,7 +35,7 @@
 #define NUM_ATTRIBUTE_PRINT "\t\t%s: %d\n"
 #define HEX_ATTRIBUTE_PRINT "\t\t%s: 0x%X\n"
 #define MODE_ATTRIBUTE_PRINT "\t\tuint16_t mode: 0x%X (%s)\n"
-#define TIME_ATTRIBUTE_PRINT "\t\t%s: %d --- %s"
+#define TIME_ATTRIBUTE_PRINT "\t\t%s: %d --- %s\n"
 #define ZONE_ATTRIBUTE_PRINT "\t\tzone[%d] = %d\n"
 #define SUP_NAME "Superblock Contents:\nStored Fields:\n"
 #define ZONE_NAME "%s zones:\n"
