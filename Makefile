@@ -21,4 +21,4 @@ partition.o: partition.c
 	$(CC) -c partition.c
 
 clean:
-	rm *.o minls
+	rm *.o minls minget
