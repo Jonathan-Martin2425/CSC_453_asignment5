@@ -30,7 +30,10 @@ int read_zone(FILE *image,
     return EXIT_SUCCESS;
 }
 
-/* */
+/* given an inode and neccessary information to traverse
+   the MINIX file system, it creates and returns a pointer
+   to an allocated block of all data in said file.
+   On error returns NULL */
 void *read_file(FILE *image, 
                 struct inode *node, 
                 struct superblock *super, 

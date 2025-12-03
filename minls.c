@@ -7,6 +7,7 @@
 
 #define OPTSTR "vp:s:"
 #define USAGE "Usage: [ -v ] [ -p part [ -s subpart ] ] imagefile [ path ]\n"
+#define DIR_PRINT "%s:\n"
 #define PARTERR "partition must be between 0-3"
 #define SUBPARTERR "subpartition must be between 0-3"
 #define NO_IMG "an image file must be provided"
@@ -15,15 +16,16 @@
 #define INITIALDISK 0
 #define MAX_PART 4
 #define DEF_PATH "/"
-#define PERM_STRING 11
+#define SLASH '/'
+#define PERM_STRING 12
 #define SIZE_STRING 10
 
 /* defineing all functions used in main before
    writing later for style purposes*/
-void print_reg_file(struct inode, char *);
-void print_dir(struct inode, char *);
+void print_reg_file(struct inode *, char *);
+void print_dir(struct dir_entry *, struct inode *, off_t, char *);
 void perms_print(uint16_t, char *buf);
-void canonicalizer(char *);
+int canonicalizer(char *);
 
 int main(int argc, char *argv[]) {
     int option, path_len;
@@ -33,9 +35,10 @@ int main(int argc, char *argv[]) {
     char *image = NULL, *min_path = NULL, *path_name;
     FILE *image_file;
     uint32_t disk_start, part_size;
-    struct superblock *superblock;
-    struct inode found_file;
-    off_t inode_table_offset;
+    struct superblock *super;
+    struct inode found_file, *inode_table;
+    off_t inode_table_offset, possible_num_entries;
+    struct dir_entry *dir_data;
 
     /* parses all options using getopt and returns appropriately,
      * erroring if they are invalid in anyway */
@@ -94,7 +97,9 @@ int main(int argc, char *argv[]) {
         memset(path_name, 0, path_len + 1);
         strncpy(min_path, argv[optind], path_len);
         strncpy(path_name, argv[optind], path_len);
-        canonicalizer(path_name);
+        if(canonicalizer(path_name) == EXIT_FAILURE){
+            return EXIT_FAILURE;
+        }
     } else {
         min_path = DEF_PATH;
         path_name = DEF_PATH;
@@ -145,9 +150,42 @@ int main(int argc, char *argv[]) {
        if it is a directory, print information about each file in it,
        if it isn't print out information of file */
     if ((found_file.mode & FILE_TYPE_MASK) == DIR_MASK) {
-        print_dir(found_file, path_name);
+
+        super = get_superblock(image_file, disk_start * SECTOR_SIZE, FALSE);
+        dir_data = (struct dir_entry*)read_file(image_file, 
+                                                &found_file, 
+                                                super,
+                                                disk_start * SECTOR_SIZE);
+        if(dir_data == NULL){
+            return EXIT_FAILURE;
+        }
+
+        possible_num_entries = (found_file.size + 
+                                sizeof(struct dir_entry) - 1 ) /  
+                                sizeof(struct dir_entry);
+
+        inode_table_offset = get_inode_table_start(super, 
+                                                   disk_start * SECTOR_SIZE);
+        inode_table = malloc(sizeof(struct inode) * super->ninodes);
+        if(inode_table == NULL){
+            perror(MALLOCERR);
+            return EXIT_FAILURE;
+        }
+        if(fseek(image_file, inode_table_offset, SEEK_SET) < 0){
+            perror(FILEERR);
+            return EXIT_FAILURE;
+        }
+        if(fread((void*)inode_table, 
+                sizeof(struct inode), 
+                super->ninodes, image_file) <= 0){
+            perror(READERR);
+            return EXIT_FAILURE;
+        }
+
+        print_dir(dir_data, inode_table, possible_num_entries, path_name);
+
     } else if ((found_file.mode & FILE_TYPE_MASK) == REG_MASK) {
-        print_reg_file(found_file, path_name);
+        print_reg_file(&found_file, path_name);
     } else {
         perror(LS_TYPE_INVAL);
         return EXIT_FAILURE;
@@ -159,74 +197,82 @@ int main(int argc, char *argv[]) {
 
 /* Prints the given file in "[permissions] [size] [filename]" format. 
  * Assumes filename is null terminated */
-void print_reg_file(struct inode file, char *name) {
+void print_reg_file(struct inode *file, char *name) {
     char perms[PERM_STRING];
     char size[SIZE_STRING];
+    char name_buf[NAME_SIZE];
     uint32_t file_size;
-    /* MAKE SURE YOU GET RID OF THE LEADING SLASH IF PRINTING A REGULAR FILE
- *
- *
- *
- *
- *
- *
- * MAKE SURE YOU GET RID OF THE LEADING SLASH IF PRINTING A REGULAR FILE
- *
- * */
-    perms_print(file.mode, perms);
+    strmode((mode_t)file->mode, perms);
+    memset((void*)size, 0, SIZE_STRING);
 
-    file_size = file.size;
+    file_size = file->size;
     sprintf(size, "%9u", file_size);
-    size[9] = '\0';
 
+    /* only cpoies 1st 60 characters of name 
+       since filenames are not NULL terminated
+       sometimes */
+    strncpy(name_buf, name, NAME_SIZE);
     printf(REG_FILE_PRINT, perms, size, name);
 }
 
-void print_dir(struct inode file, char *name) {
-    
-}
+void print_dir(struct dir_entry *dir_data, 
+               struct inode *inode_table,
+               off_t num_entries, 
+               char *name){
+    int i;
+    struct dir_entry *cur_entry;
+    struct inode *cur_inode;
+    printf(DIR_PRINT, name);
 
-void perms_print(uint16_t mode, char *buf) {
-    buf[0] = ((mode & FILE_TYPE_MASK) == DIR_MASK) ? 'd' : '-';
-    buf[1] = (mode & OWNER_READ)  ? 'r' : '-';
-    buf[2] = (mode & OWNER_WRITE) ? 'w' : '-';
-    buf[3] = (mode & OWNER_EXEC)  ? 'x' : '-';
-    buf[4] = (mode & GROUP_READ)  ? 'r' : '-';
-    buf[5] = (mode & GROUP_WRITE) ? 'w' : '-';
-    buf[6] = (mode & GROUP_EXEC)  ? 'x' : '-';
-    buf[7] = (mode & OTHER_READ)  ? 'r' : '-';
-    buf[8] = (mode & OTHER_WRITE) ? 'w' : '-';
-    buf[9] = (mode & OTHER_EXEC)  ? 'x' : '-';
-    buf[10] = '\0';
+    /* reads DIR file and iterates through
+       each other file and prints them out
+       if they are DIRs or regular files */
+    for(i = 0; i < num_entries; i++){
+        cur_entry = (struct dir_entry*)((intptr_t)dir_data +
+                     (sizeof(struct dir_entry) * i));
+
+        if(cur_entry->inode == 0) continue;
+
+        cur_inode = (struct inode*)( (intptr_t)inode_table + 
+                     sizeof(struct inode) * (cur_entry->inode - 1));
+        print_reg_file(cur_inode, (char*)cur_entry->name);
+    }
 }
 
 /* Removes duplicate slashes, adds slash at 
  * beginning and removes slash from end */
-void canonicalizer(char *original) {
+int canonicalizer(char *original) {
     int i = 0, j = 0, length;
     char *copy, prev;
     length = strlen(original);
-    copy = calloc(length + 2, sizeof(char));
-    
-    /* ensure both strings start with a slash */
-    if (original[i] != '/') {
-        copy[j++] = '/';
-    } else {
-        i++;
-        j++;
+    copy = (char*)calloc(length + 2, sizeof(char));
+    if(copy == NULL){
+        perror(MALLOCERR);
+        return EXIT_FAILURE;
     }
-   
+    
+    /* ensure copy starts with a slash
+       and both strings start at a point
+       without a slash */
+    copy[j++] = SLASH;
+    if (original[i] == SLASH) {
+        i++;
+    } 
+    
     /* copy one char at a time, dont copy if its a repeated slash */ 
-    prev = '/';
+    prev = SLASH;
     while (i < length) {
-        if (!(original[i] == '/' && prev == '/')) {
+        /* only copies character if neither the previous
+           or current character equal slash, therefore 
+           only adding one slash per series of slashes*/
+        if(original[i] != SLASH || prev != SLASH){
             prev = copy[j++] = original[i];
         }
         i++;
     }
     
     /* Remove slash if there, and add null term. */
-    if (j > 1 && copy[j - 1] == '/') {
+    if (j > 1 && copy[j - 1] == SLASH) {
         j--;
     }
     copy[j] = '\0';

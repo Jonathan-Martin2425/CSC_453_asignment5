@@ -121,7 +121,7 @@ struct dir_entry {
 int read_zone(FILE *, off_t, uint32_t, uint32_t, void*);
 void *read_file(FILE *, struct inode *, struct superblock *, off_t);
 struct superblock *get_superblock(FILE *, off_t, int);
-off_t get_inode_table(struct superblock *, off_t);
+off_t get_inode_table_start(struct superblock *, off_t);
 int find_file(char *, FILE *, off_t , struct inode *, int);
 void print_superblock(struct superblock *);
 void print_inode(struct inode);
