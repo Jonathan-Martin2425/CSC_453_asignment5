@@ -25,13 +25,10 @@ int main(int argc, char *argv[]) {
     extern char *optarg;
     int isV = FALSE, part = NO_PART, sub_part = NO_PART;
     char *image = NULL, *src = NULL, *dest_path = NULL;
-    FILE *image_file, *dest, *test;
+    FILE *image_file, *dest;
     uint32_t disk_start, part_size;
-    struct superblock *superblock;
     struct inode found_file;
-    off_t inode_table_offset;
     void *file_data;
-    size_t i;
 
     /* parses all options using getopt and returns appropriately,
      * erroring if they are invalid in anyway */
@@ -184,4 +181,5 @@ int main(int argc, char *argv[]) {
     free(file_data);
     fclose(image_file);
     fclose(dest);
+    return EXIT_SUCCESS;
 }
