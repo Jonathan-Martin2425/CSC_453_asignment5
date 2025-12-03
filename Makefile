@@ -1,6 +1,6 @@
 CC = cc
 
-min: minls minget
+all: minls minget
 
 minget: minget.o util.o partition.o
 	$(CC) -o minget minget.o partition.o util.o
