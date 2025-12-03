@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
             }
             break;
         default:
-            printf(USAGE);
+            fprintf(stderr, USAGE);
             return EXIT_FAILURE;
             break;
         }
@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
         image = argv[optind];
         optind++;
     } else {
-        printf(USAGE);
+        fprintf(stderr, USAGE);
         return EXIT_FAILURE;
     }
 
@@ -126,7 +126,7 @@ int main(int argc, char *argv[]) {
             disk_start = INITIALDISK;
             part_size = INITIALDISK;
         } else {
-            printf(USAGE);
+            fprintf(stderr, USAGE);
             return EXIT_FAILURE;
         }
     }
