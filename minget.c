@@ -162,6 +162,7 @@ int main(int argc, char *argv[]) {
     if((found_file.mode & FILE_TYPE_MASK) != REG_MASK){
         fclose(image_file);
         fclose(dest);
+        perror(LS_TYPE_INVAL);
         return EXIT_FAILURE;
     }
     
@@ -171,16 +172,6 @@ int main(int argc, char *argv[]) {
                  &found_file, 
                  get_superblock(image_file, disk_start * SECTOR_SIZE, FALSE),
                  disk_start * SECTOR_SIZE)) == NULL){
-        fclose(image_file);
-        fclose(dest);
-        return EXIT_FAILURE;
-    }
-
-    /* check if it is a regular file 
-       and error if it isn't */
-    if((found_file.mode & FILE_TYPE_MASK) != REG_MASK){
-        perror(LS_TYPE_INVAL);
-        free(file_data);
         fclose(image_file);
         fclose(dest);
         return EXIT_FAILURE;
