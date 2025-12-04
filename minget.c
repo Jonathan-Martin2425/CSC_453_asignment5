@@ -165,13 +165,22 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, LS_TYPE_INVAL);
         return EXIT_FAILURE;
     }
-
+    
     /* read the file's data from the found
        file inode */
     if((file_data = read_file(image_file, 
                  &found_file, 
                  get_superblock(image_file, disk_start * SECTOR_SIZE, FALSE),
                  disk_start * SECTOR_SIZE)) == NULL){
+        fclose(image_file);
+        fclose(dest);
+        return EXIT_FAILURE;
+    }
+
+    /* write the file's data into the opened destination file 
+       from the given size in the file inode */
+    if(fwrite(file_data, 1, found_file.size, dest) != found_file.size){
+        free(file_data);
         fclose(image_file);
         fclose(dest);
         return EXIT_FAILURE;

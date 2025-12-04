@@ -1,4 +1,3 @@
-
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -17,16 +16,16 @@
 #define MODE_PRINT_SIZE 12
 #define NAME_SIZE 60
 #define FIRST_BLOCKS 2
-#define MALLOCERR "Malloc error\n"
-#define READERR "read error\n"
-#define FILEERR "FILE error\n"
-#define SUPERERR "Superblock magic number invalid. Not a MINIX file system\n"
+#define MALLOCERR "Malloc error"
+#define READERR "read error"
+#define FILEERR "FILE error"
+#define SUPERERR "Superblock magic number invalid. Not a MINIX file system"
 #define INODEERR "Invalid inode, inode number is " \
-                 "greater than total ammount of inodes\n"
-#define DIRERR "File in path is not a DIR\n"
-#define TOOBIG "File has a size greater than the max possible size\n"
-#define FILENOTFOUNDERR "File couldn't be found\n"
-#define NAMEERR "File name is too long in path\n"
+                 "greater than total ammount of inodes"
+#define DIRERR "File in path is not a DIR"
+#define TOOBIG "File has a size greater than the max possible size"
+#define FILENOTFOUNDERR "File couldn't be found"
+#define NAMEERR "File name is too long in path"
 #define NO_PART -1
 
 #define SUB_PART_PRINT "Subparition table %d: \n"
