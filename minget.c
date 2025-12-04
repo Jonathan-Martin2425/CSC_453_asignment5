@@ -179,6 +179,7 @@ int main(int argc, char *argv[]) {
     /* check if it is a regular file 
        and error if it isn't */
     if((found_file.mode & FILE_TYPE_MASK) != REG_MASK){
+        perror(LS_TYPE_INVAL);
         free(file_data);
         fclose(image_file);
         fclose(dest);
