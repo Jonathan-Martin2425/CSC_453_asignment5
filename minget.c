@@ -176,6 +176,15 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+    /* check if it is a regular file 
+       and error if it isn't */
+    if((found_file.mode & FILE_TYPE_MASK) != REG_MASK){
+        free(file_data);
+        fclose(image_file);
+        fclose(dest);
+        return EXIT_FAILURE;
+    }
+
     /* write the file's data into the opened destination file 
        from the given size in the file inode */
     if(fwrite(file_data, 1, found_file.size, dest) != found_file.size){
