@@ -8,11 +8,11 @@
 #define OPTSTR "vp:s:"
 #define USAGE "Usage: [ -v ] [ -p part [ -s subpart ] ] imagefile [ path ]\n"
 #define DIR_PRINT "%s:\n"
-#define PARTERR "partition must be between 0-3"
-#define SUBPARTERR "subpartition must be between 0-3"
-#define NO_IMG "an image file must be provided"
-#define MALLOCERR "Malloc error"
-#define OPENERR "open error"
+#define PARTERR "partition must be between 0-3\n"
+#define SUBPARTERR "subpartition must be between 0-3\n"
+#define NO_IMG "an image file must be provided\n"
+#define MALLOCERR "Malloc error\n"
+#define OPENERR "open error\n"
 #define INITIALDISK 0
 #define MAX_PART 4
 #define DEF_PATH "/"
@@ -50,14 +50,14 @@ int main(int argc, char *argv[]) {
         case 'p':
             part = strtol(optarg, NULL, 10);
             if (part < 0 || part >= MAX_PART) {
-                perror(PARTERR);
+                fprintf(stderr, PARTERR);
                 return EXIT_FAILURE;
             }
             break;
         case 's':
             sub_part = strtol(optarg, NULL, 10);
             if (sub_part < 0 || sub_part >= MAX_PART) {
-                perror(SUBPARTERR);
+                fprintf(stderr, SUBPARTERR);
                 return EXIT_FAILURE;
             }
             break;
@@ -87,12 +87,12 @@ int main(int argc, char *argv[]) {
            will use strtok on */
         path_len = strlen(argv[optind]);
         if ((intptr_t)(min_path = (char*)malloc(path_len + 1)) < 0) {
-            perror(MALLOCERR);
+            fprintf(stderr, MALLOCERR);
             return EXIT_FAILURE;
         }
         /* Making two copies to have one for printing with */
         if ((intptr_t)(path_name = (char*)malloc(path_len + 1)) < 0) {
-            perror(MALLOCERR);
+            fprintf(stderr, MALLOCERR);
             return EXIT_FAILURE;
         }
         memset(min_path, 0, path_len + 1);
@@ -110,7 +110,7 @@ int main(int argc, char *argv[]) {
     /* open image file, therefore checking if it
        is valid */
     if ((image_file = fopen(image, "r")) == NULL) {
-        perror(OPENERR);
+        fprintf(stderr, OPENERR);
         return EXIT_FAILURE;
     }
 
@@ -178,17 +178,17 @@ int main(int argc, char *argv[]) {
                                                    disk_start * SECTOR_SIZE);
         inode_table = malloc(sizeof(struct inode) * super->ninodes);
         if(inode_table == NULL){
-            perror(MALLOCERR);
+            fprintf(stderr, MALLOCERR);
             return EXIT_FAILURE;
         }
         if(fseek(image_file, inode_table_offset, SEEK_SET) < 0){
-            perror(FILEERR);
+            fprintf(stderr, FILEERR);
             return EXIT_FAILURE;
         }
         if(fread((void*)inode_table, 
                 sizeof(struct inode), 
                 super->ninodes, image_file) <= 0){
-            perror(READERR);
+            fprintf(stderr, READERR);
             return EXIT_FAILURE;
         }
 
@@ -200,7 +200,7 @@ int main(int argc, char *argv[]) {
         /* regular file */
         print_reg_file(&found_file, path_name);
     } else {
-        perror(LS_TYPE_INVAL);
+        fprintf(stderr, LS_TYPE_INVAL);
         return EXIT_FAILURE;
     }
 
@@ -277,7 +277,7 @@ int canonicalizer(char *original) {
     length = strlen(original);
     copy = (char*)calloc(length + 2, sizeof(char));
     if(copy == NULL){
-        perror(MALLOCERR);
+        fprintf(stderr, MALLOCERR);
         return EXIT_FAILURE;
     }
     

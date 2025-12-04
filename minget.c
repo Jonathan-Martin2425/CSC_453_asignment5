@@ -8,11 +8,11 @@
 #define OPTSTR "vp:s:"
 #define USAGE "Usage: [ -v ] [ -p part [ -s subpart ] ] " \
               "imagefile srcpath [ dstpath ]\n"
-#define PARTERR "partition must be between 0-3"
-#define SUBPARTERR "subpartition must be between 0-3"
-#define NO_IMG "an image file must be provided"
-#define MALLOCERR "Malloc error"
-#define OPENERR "open error"
+#define PARTERR "partition must be between 0-3\n"
+#define SUBPARTERR "subpartition must be between 0-3\n"
+#define NO_IMG "an image file must be provided\n"
+#define MALLOCERR "Malloc error\n"
+#define OPENERR "open error\n"
 #define INITIALDISK 0
 #define MAX_PART 4
 #define DEF_PATH "/"
@@ -41,14 +41,14 @@ int main(int argc, char *argv[]) {
         case 'p':
             part = strtol(optarg, NULL, 10);
             if (part < 0 || part >= MAX_PART) {
-                perror(PARTERR);
+                fprintf(stderr, PARTERR);
                 return EXIT_FAILURE;
             }
             break;
         case 's':
             sub_part = strtol(optarg, NULL, 10);
             if (sub_part < 0 || sub_part >= MAX_PART) {
-                perror(SUBPARTERR);
+                fprintf(stderr, SUBPARTERR);
                 return EXIT_FAILURE;
             }
             break;
@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
         path_len = strlen(argv[optind]);
 
         if ((intptr_t)(src = (char*)malloc(path_len + 1)) < 0) {
-            perror(MALLOCERR);
+            fprintf(stderr, MALLOCERR);
             return EXIT_FAILURE;
         }
 
@@ -98,14 +98,14 @@ int main(int argc, char *argv[]) {
        if neccesary, therefore checking if
        they are valid */
     if ((image_file = fopen(image, "r")) == NULL) {
-        perror(OPENERR);
+        fprintf(stderr, OPENERR);
         return EXIT_FAILURE;
     }
 
     if(dest_path != NULL){
         if ((dest = fopen(dest_path, "w+")) == NULL) {
             fclose(image_file);
-            perror(OPENERR);
+            fprintf(stderr, OPENERR);
             return EXIT_FAILURE;
         }
     }else{
@@ -162,7 +162,7 @@ int main(int argc, char *argv[]) {
     if((found_file.mode & FILE_TYPE_MASK) != REG_MASK){
         fclose(image_file);
         fclose(dest);
-        perror(LS_TYPE_INVAL);
+        fprintf(stderr, LS_TYPE_INVAL);
         return EXIT_FAILURE;
     }
     
