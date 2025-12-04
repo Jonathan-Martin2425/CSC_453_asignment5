@@ -11,7 +11,6 @@
 #define PARTERR "partition must be between 0-3\n"
 #define SUBPARTERR "subpartition must be between 0-3\n"
 #define NO_IMG "an image file must be provided\n"
-#define MALLOCERR "Malloc error\n"
 #define OPENERR "open error\n"
 #define INITIALDISK 0
 #define MAX_PART 4
