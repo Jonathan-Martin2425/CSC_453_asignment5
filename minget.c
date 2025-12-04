@@ -177,15 +177,6 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    /* write the file's data into the opened destination file 
-       from the given size in the file inode */
-    if(fwrite(file_data, 1, found_file.size, dest) != found_file.size){
-        free(file_data);
-        fclose(image_file);
-        fclose(dest);
-        return EXIT_FAILURE;
-    }
-
     /* free and close files before exiting */
     free(file_data);
     fclose(image_file);
