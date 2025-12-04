@@ -164,7 +164,7 @@ int main(int argc, char *argv[]) {
         fclose(dest);
         return EXIT_FAILURE;
     }
-    
+
     /* read the file's data from the found
        file inode */
     if((file_data = read_file(image_file, 
