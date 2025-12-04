@@ -89,6 +89,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+    /* get optional destination path */
     if(argc > optind){
         dest_path = argv[optind];
     }
@@ -108,6 +109,7 @@ int main(int argc, char *argv[]) {
             return EXIT_FAILURE;
         }
     }else{
+        /* default destination */
         dest = stdout;
     }
 
@@ -128,6 +130,8 @@ int main(int argc, char *argv[]) {
             disk_start = INITIALDISK;
             part_size = INITIALDISK;
         } else {
+            /* invalid usage */
+            
             fclose(image_file);
             fclose(dest);
             fprintf(stderr, USAGE);
@@ -135,11 +139,11 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    /***  
+    /*
        search and verify super block, then
        search starting from root by parsing
        path given to get inode of file
-    ***/
+    */
     if (find_file(src, 
                  image_file,  
                  disk_start * SECTOR_SIZE, 
@@ -161,6 +165,8 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
     
+    /* read the file's data from the found
+       file inode */
     if((file_data = read_file(image_file, 
                  &found_file, 
                  get_superblock(image_file, disk_start * SECTOR_SIZE, FALSE),
@@ -170,8 +176,8 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-
-
+    /* write the file's data into the opened destination file 
+       from the given size in the file inode */
     if(fwrite(file_data, 1, found_file.size, dest) != found_file.size){
         free(file_data);
         fclose(image_file);
@@ -179,6 +185,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+    /* free and close files before exiting */
     free(file_data);
     fclose(image_file);
     fclose(dest);

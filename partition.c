@@ -23,6 +23,11 @@ uint32_t uint32_convert(uint8_t *p) {
          | ((uint32_t)p[3] << 24);
 }
 
+/* given the pararmeters of minls and minget
+   tries to find the start of the partitioned disk.
+   Then populated the offset and p_size parameters
+   with the start of disk in sectors and part size
+   respectivley */
 int partition_finder(char *img, int part_num, int sub_part, 
                      uint32_t *offset, uint32_t *p_size, int isV) {
     uint8_t mbr[MBR_SIZE];
@@ -33,12 +38,14 @@ int partition_finder(char *img, int part_num, int sub_part,
     size_t base;
     off_t location;
 
+    /* opens disk image, returns if 
+       image path is invalid */
     fd = open(img, O_RDONLY);
     if (fd < 0) {
         return EXIT_FAILURE;
     }
     
-    /* read 512 bytes into buffer */
+    /* read 1st 512 bytes into buffer */
     r = read(fd, mbr, MBR_SIZE);
     if (r != MBR_SIZE) {
         close(fd);
@@ -60,7 +67,8 @@ int partition_finder(char *img, int part_num, int sub_part,
         return EXIT_FAILURE;
     }
 
-    /* check validity of partition number */
+    /* check validity of partition number
+       parameter */
     if (part_num < 0 || part_num > 3) {
         close(fd);
         fprintf(stderr, PNUM_INVAL);
@@ -78,7 +86,8 @@ int partition_finder(char *img, int part_num, int sub_part,
         return EXIT_FAILURE;
     }
     
-    /* getting 32 bit ints from partition struct */ 
+    /* converting 32 bit ints from partition struct 
+       returns with error if part size is 0 */ 
     first_sec = uint32_convert(&mbr[base + PART_LFIRST_OFFSET]);
     psize = uint32_convert(&mbr[base + PART_SIZE_OFFSET]);
 
@@ -88,15 +97,21 @@ int partition_finder(char *img, int part_num, int sub_part,
         return EXIT_FAILURE;
     }
 
-    /* -1 == no subpartitions, 0-3 == looking for subpartitions */
-    if (sub_part != -1) {
+    /* checks if a subpartition was given, then trys to
+       search for subpartition too */
+    if (sub_part != NO_PART) {
+
+        /* check if subpartition number given
+           is valid, since a MINIX file system
+           is only partitioned in 4 partitions*/
         if (sub_part < 0 || sub_part > 3) {
             close(fd);
             fprintf(stderr, SPNUM_INVAL);
             return EXIT_FAILURE;
         }
         
-        /* traverse to subpartition's partition table */ 
+        /* seek to subpartition's partition table
+           from found partition table */ 
         location = (off_t)first_sec * SECTOR_SIZE;
         r = lseek(fd, location, SEEK_SET);
         
@@ -120,6 +135,8 @@ int partition_finder(char *img, int part_num, int sub_part,
                              sub_part, part_num);
         }
         
+        /* repeat steps to check validity of subpartition
+           table and find start of disk and part size*/
         if (sub_mbr[PART_TABLE_SIG_OFFSET] != VALID_PART_BYTE_ONE || 
             sub_mbr[PART_TABLE_SIG_OFFSET + 1] != VALID_PART_BYTE_TWO) {
             close(fd);
@@ -145,6 +162,7 @@ int partition_finder(char *img, int part_num, int sub_part,
             return EXIT_FAILURE;
         }
 
+        /* return subpartition lfirst as start of disk */
         *offset = sub_first_sec;
         *p_size = sub_psize;
 
@@ -153,6 +171,7 @@ int partition_finder(char *img, int part_num, int sub_part,
         return EXIT_SUCCESS;
     }
 
+    /* return partition lfirst as start of disk */
     *offset = first_sec;
     *p_size = psize;
 
@@ -160,26 +179,34 @@ int partition_finder(char *img, int part_num, int sub_part,
     return EXIT_SUCCESS;
 }
 
+/* prints partition table or subpartition table
+   depending on values of "part" and "subPart" */
 void print_part_table(int fd, off_t table_offset, int part, int subPart){
     struct partition_entry buf[NUM_PART];
     int i;
 
+    /* seek to table_offset given and read
+       whole partition table */
     if(lseek(fd, table_offset, SEEK_SET) < 0){
         fprintf(stderr, FILEERR);
         return;
     }
-
     if(read(fd, &buf, sizeof(struct partition_entry) * NUM_PART) < 0){
         fprintf(stderr, FILEERR);
         return;
     }
 
+    /* check if a subpartition value is given 
+       to indicate whether to print partition
+       as a regular or sub partition */
     if(subPart != NO_PART){
         fprintf(stderr, SUB_PART_PRINT, subPart);
     }else{
         fprintf(stderr, PART_PRINT);
     }
 
+    /* print whole partition table, with an indicator for which
+       partition was actually found/used */
     for(i = 0; i < NUM_PART; i++){
         if(i == part){
             fprintf(stderr, ACTUAL_PART_ENTRY, i + 1);

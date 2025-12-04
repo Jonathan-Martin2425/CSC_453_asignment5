@@ -1,21 +1,26 @@
 
 #include "util.h"
 
+
+/* seeks and reads one zone of a file
+   given the start of the whole disk,
+   the zone size and index into the given
+   buffer. */
 int read_zone(FILE *image, 
               off_t disk_start, 
               uint32_t zone_size, 
-              uint32_t zone, 
+              uint32_t zone_index, 
               void *buf){
 
     /* check for 0 zone, and still write full zone of 0's
        to buffer instead */
-    if(zone == 0){
+    if(zone_index == 0){
         memset((void*)buf, 0, zone_size);
         return EXIT_SUCCESS;
     }
 
     /* seek to correct zone from given information*/
-    if(fseek(image, disk_start + (zone_size * zone), SEEK_SET) < 0){
+    if(fseek(image, disk_start + (zone_size * zone_index), SEEK_SET) < 0){
         perror(FILEERR);
         return EXIT_FAILURE;
     }
@@ -32,7 +37,9 @@ int read_zone(FILE *image,
 
 /* given an inode and neccessary information to traverse
    the MINIX file system, it creates and returns a pointer
-   to an allocated block of all data in said file.
+   to an allocated block of all data in said file with
+   some extra space if the size isn't a multiple
+   of the zone size.
    On error returns NULL */
 void *read_file(FILE *image, 
                 struct inode *node, 
@@ -55,23 +62,28 @@ void *read_file(FILE *image,
     indirect_num_zones = super->blocksize / sizeof(uint32_t);
 
     /* calculates zones allocated to file from given size
-       by doing floor division on zone_size and rounding up*/
+       by doing floor division on zone_size, rounding up*/
     num_zones = (node->size + zone_size - 1) / zone_size;
 
-    /* allocates returning pointer with full 
-       potential file size allocated */
+    /* allocates resulting pointer with full 
+       possible file size allocated */
     res = malloc((size_t)zone_size * num_zones);
     if(res == NULL){
         perror(MALLOCERR);
         return NULL;
     }
 
+    /* iterate through each zone, reading into the
+       resulting pointer one zone index at a time
+       using the "read_zone" function */
     for(i = 0; i < num_zones; i++){
         /* check for which zone number to take from, being either
            from the direct, indirect or double_indirect zones*/
         if(i < DIRECT_ZONES){
+            /* direct */
             cur_zone = node->zone[i];
         }else if(i < indirect_num_zones + DIRECT_ZONES){
+            /* indirect */
 
             /* checks if the indirect table zone has been read yet
                then reads it if it hasn't before continuing*/
@@ -96,6 +108,7 @@ void *read_file(FILE *image,
 
             cur_zone = indirect_zone_table[i - DIRECT_ZONES];
         }else{
+            /* two_indirect */
 
             /* if double_indirect table hasn't been read,
                read it and initialize index */
@@ -124,6 +137,7 @@ void *read_file(FILE *image,
 
             /* if needed, read new table from zone in double indirect table*/
             if((i - DIRECT_ZONES) % indirect_num_zones == 0){
+
                 /* free previous table, then check if the index is too large*/
                 free(indirect_zone_table);
                 if(double_table_index >= indirect_num_zones){
@@ -135,7 +149,7 @@ void *read_file(FILE *image,
                     return NULL;
                 }
 
-                /* allocate zone to read double indirect table 
+                /* allocate zone to read indirect table 
                    into then read it using the value in
                    the double indirect table index */
                 indirect_zone_table = malloc(zone_size);
@@ -160,12 +174,15 @@ void *read_file(FILE *image,
                 double_table_index++;
             }
 
+            /* calculate index in current indirect table
+               from increasing value for i that goes over 
+               "indirect_num_zones" */
             cur_zone = indirect_zone_table[(i - DIRECT_ZONES) %
                                             indirect_num_zones];
         }
 
-        /* calculate next to zone to read into result
-           then read zone */
+        /* calculate full offset to the current zone 
+           to read into result then read zone */
         res_offset = (intptr_t)res + zone_size * i;
         if(read_zone(image,
                      disk_start, 
@@ -179,13 +196,17 @@ void *read_file(FILE *image,
         }
     }
 
+    /* frees both indirect and double indirect tables
+       regardless if they've been allocated and return 
+       resulting pointer */
     free(indirect_zone_table);
     free(double_indirect_table);
     return res;
 }
 
-/* given the start position of the disk and the opened image file,
-   returns an allocated struct of the superblock if it is valid*/
+/* given the start position of the disk and the image file,
+   returns an allocated struct of the superblock if it is valid,
+   otherwise it errors and returns NULL*/
 struct superblock *get_superblock(FILE *image, off_t disk_start, int isV){
     struct superblock *super;
 
@@ -209,6 +230,8 @@ struct superblock *get_superblock(FILE *image, off_t disk_start, int isV){
         return NULL;
     }
 
+    /* print superblock after reading, even if it's invalid
+       so user to see */
     if(isV){
         print_superblock(super);
     }
@@ -240,6 +263,13 @@ off_t get_inode_table_start(struct superblock *super, off_t disk_start){
     return inode_offset;
 }
 
+
+/* given a path to a file in a MINIX file system
+   given by the image file and start of disk, 
+   starting from the root search through the
+   directories of the path given and populate
+   the "res" buffer with the inode representing
+   that file */
 int find_file(char *path, 
               FILE *image, 
               off_t disk_start,
@@ -263,8 +293,7 @@ int find_file(char *path,
     }
 
     /* get inode table offset from superblock
-       then read it to get it as an array of
-       inodes */
+       then read it to getinode table */
     inode_offset = get_inode_table_start(super, disk_start);
     inode_table = malloc(sizeof(struct inode) * super->ninodes);
     if(inode_table == NULL){
@@ -285,20 +314,25 @@ int find_file(char *path,
         return EXIT_FAILURE;
     }
 
-    cur_inode = inode_table; /* setting cur_inode to root*/
+    /* initialize 1st inode as root,
+       since that is how we will always 
+       start from */
+    cur_inode = inode_table;
 
     /* search through each token/dir in path
-       until the last token is found and erroring
+       until the last token is found, erroring
        otherwise */
     token = strtok(path, PATH_DELIM);
     while(token != NULL){
-        /* extra slashes case, so go onto next token*/
+        /* extra slash case, so go onto next token*/
         token_len = strlen(token);
         if(token_len == 0){
             token = strtok(NULL, PATH_DELIM);
             continue;
         }
 
+        /* DIRor file in path is greater than any possible
+           name in a MINIX system */
         if(token_len > NAME_SIZE){
             perror(NAMEERR);
             free(super);
@@ -314,7 +348,7 @@ int find_file(char *path,
             return EXIT_FAILURE;
         }
 
-        /* read cur_inode datazones to start DIR search*/
+        /* read current file/inode, knowing it is a DIR*/
         file_zones = read_file(image, cur_inode, super, disk_start);
         if(file_zones == NULL){
             free(super);
@@ -357,8 +391,8 @@ int find_file(char *path,
             }
         }
 
-        /* check if the file is found before continuing
-           to the next file */
+        /* after search, if a file in the path
+           hasn't been found, error*/
         if(!found_entry){
             perror(FILENOTFOUNDERR);
             free(file_zones);
@@ -380,6 +414,7 @@ int find_file(char *path,
     return EXIT_SUCCESS;
 }
 
+/* print out verbose option for superblock*/
 void print_superblock(struct superblock *super){
     fprintf(stderr, SUP_NAME);
     fprintf(stderr, NUM_ATTRIBUTE_PRINT, "ninodes", super->ninodes);
@@ -396,6 +431,7 @@ void print_superblock(struct superblock *super){
     fprintf(stderr, NEW_LINE);   
 }
 
+/* print out verbose option for a inode*/
 void print_inode(struct inode node){
     char buf[MODE_PRINT_SIZE];
     int i;
@@ -427,6 +463,9 @@ void print_inode(struct inode node){
     fprintf(stderr, NEW_LINE);
 }
 
+/* since "strmode" isn't in the unix servers
+   we made our own assuming the buffer is
+   correctly allocated */
 void perms_print(uint16_t mode, char *buf) {
 
     buf[0] = ((mode & FILE_TYPE_MASK) == DIR_MASK) ? 'd' : '-';

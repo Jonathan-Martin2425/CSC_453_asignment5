@@ -68,8 +68,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    /* gets other two arguments if they exist
-       and exiting if no image file is provided */
+    /* gets image file, exiting if not provided*/
     if (argc > optind) {
         image = argv[optind];
         optind++;
@@ -78,6 +77,10 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+    /* gets path to list if given as
+       a copy of the string for the 
+       "find_file" function to use
+       strtok on */
     if (argc > optind) {
         /* allocates memory to copy path
            string to new path string we
@@ -131,11 +134,11 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    /***  
+    /*
        search and verify super block, then
        search starting from root by parsing
        path given to get inode of file
-    ***/
+    */
     if (find_file(min_path, 
                  image_file,  
                  disk_start * SECTOR_SIZE, 
@@ -145,12 +148,16 @@ int main(int argc, char *argv[]) {
     }
 
     /* MINLS SPECIFIC 
-       get type of file and other information about it.
+       check type of file.
        if it is a directory, print information about each file in it,
        if it isn't print out information of file */
     if ((found_file.mode & FILE_TYPE_MASK) == DIR_MASK) {
+        /* directory */
 
+        /* get superblock to read file data and inode table*/
         super = get_superblock(image_file, disk_start * SECTOR_SIZE, FALSE);
+
+        /* read dir entries using "read_file" function*/
         dir_data = (struct dir_entry*)read_file(image_file, 
                                                 &found_file, 
                                                 super,
@@ -159,10 +166,14 @@ int main(int argc, char *argv[]) {
             return EXIT_FAILURE;
         }
 
+        /* calculates the possible ammount of entires in
+           the directory from the file inode size */
         possible_num_entries = (found_file.size + 
                                 sizeof(struct dir_entry) - 1 ) /  
                                 sizeof(struct dir_entry);
 
+        /* get inode table offset from superblock,
+           allocate space for it and read it */
         inode_table_offset = get_inode_table_start(super, 
                                                    disk_start * SECTOR_SIZE);
         inode_table = malloc(sizeof(struct inode) * super->ninodes);
@@ -181,8 +192,12 @@ int main(int argc, char *argv[]) {
             return EXIT_FAILURE;
         }
 
+        /* pass directory entries and inode table 
+           to print out the inode of each file in
+           the directory */
         print_dir(dir_data, inode_table, possible_num_entries, path_name);
     } else if ((found_file.mode & FILE_TYPE_MASK) == REG_MASK) {
+        /* regular file */
         print_reg_file(&found_file, path_name);
     } else {
         perror(LS_TYPE_INVAL);
@@ -216,6 +231,8 @@ void print_reg_file(struct inode *file, char *name) {
     }
 }
 
+/* given the inode table and all entries in a directory,
+   prints out the information of each inode in the directory*/
 void print_dir(struct dir_entry *dir_data, 
                struct inode *inode_table,
                off_t num_entries, 
@@ -225,18 +242,30 @@ void print_dir(struct dir_entry *dir_data,
     struct inode *cur_inode;
     printf(DIR_PRINT, name);
 
-    /* reads DIR file and iterates through
-       each other file and prints them out
-       if they are DIRs or regular files */
+    /* iterates through DIR entries to get inode number,
+       finds the inode in the inode table,
+       then prints out the information if
+       it is a regular file or directory */
     for(i = 0; i < num_entries; i++){
+        
+        /* get inode number*/
         cur_entry = (struct dir_entry*)((intptr_t)dir_data +
                      (sizeof(struct dir_entry) * i));
 
+        /* deleted file */
         if(cur_entry->inode == 0) continue;
 
+        /* get inode from inode table */
         cur_inode = (struct inode*)( (intptr_t)inode_table + 
                      sizeof(struct inode) * (cur_entry->inode - 1));
-        print_reg_file(cur_inode, (char*)cur_entry->name);
+        
+        /* print out information only if it is a regular
+           file or directory, as we aren't printing out
+           all entries in subdirectories */
+        if(((cur_inode->mode & FILE_TYPE_MASK) == REG_MASK) ||
+           ((cur_inode->mode & FILE_TYPE_MASK) == DIR_MASK)){
+            print_reg_file(cur_inode, (char*)cur_entry->name);
+        }
     }
 }
 
